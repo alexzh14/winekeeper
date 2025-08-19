@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:wine_inventory/screens/admin_users_screen.dart';
+import 'package:winekeeper/screens/admin_users_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});

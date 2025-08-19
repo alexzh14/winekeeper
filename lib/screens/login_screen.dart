@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:wine_inventory/screens/home_screen.dart';
+import 'package:winekeeper/screens/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
