@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:winekeeper/models/wine_bottle.dart';
+import 'package:winekeeper/core/app_theme.dart';
 
 class WineDetailScreen extends StatefulWidget {
   final int wineIndex;
@@ -17,19 +18,19 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
   final _nameController = TextEditingController();
   final _yearController = TextEditingController();
   final _quantityController = TextEditingController();
-  
+
   String? _selectedCountry;
   String? _selectedColor;
   bool _isSparkling = false;
   bool _isEditMode = false;
   bool _hasChanges = false;
-  
+
   late Box<WineBottle> wineBox;
   late WineBottle originalWine;
 
   final List<String> _countries = [
     'Франция',
-    'Италия', 
+    'Италия',
     'Испания',
     'Германия',
     'Португалия',
@@ -45,10 +46,10 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
   ];
 
   final Map<String, Color> _wineColors = {
-    'Красное': Colors.red.shade700,
-    'Белое': Colors.amber.shade600,
-    'Розовое': Colors.pink.shade400,
-    'Оранжевое': Colors.orange.shade600,
+    'Красное': AppTheme.wineRed,
+    'Белое': AppTheme.wineWhite,
+    'Розовое': AppTheme.wineRose,
+    'Оранжевое': AppTheme.wineOrange,
   };
 
   @override
@@ -64,7 +65,7 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
       Navigator.pop(context);
       return;
     }
-    
+
     originalWine = wine;
     _nameController.text = wine.name;
     _yearController.text = wine.year?.toString() ?? '';
@@ -77,7 +78,7 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
   void _checkForChanges() {
     final currentData = _getCurrentData();
     final hasChanges = !_dataEquals(originalWine, currentData);
-    
+
     if (hasChanges != _hasChanges) {
       setState(() {
         _hasChanges = hasChanges;
@@ -89,7 +90,9 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
     return WineBottle(
       name: _nameController.text.trim(),
       country: _selectedCountry,
-      year: _yearController.text.isNotEmpty ? int.tryParse(_yearController.text) : null,
+      year: _yearController.text.isNotEmpty
+          ? int.tryParse(_yearController.text)
+          : null,
       color: _selectedColor,
       isSparkling: _isSparkling,
       quantity: int.tryParse(_quantityController.text) ?? 1,
@@ -98,11 +101,11 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
 
   bool _dataEquals(WineBottle wine1, WineBottle wine2) {
     return wine1.name == wine2.name &&
-           wine1.country == wine2.country &&
-           wine1.year == wine2.year &&
-           wine1.color == wine2.color &&
-           wine1.isSparkling == wine2.isSparkling &&
-           wine1.quantity == wine2.quantity;
+        wine1.country == wine2.country &&
+        wine1.year == wine2.year &&
+        wine1.color == wine2.color &&
+        wine1.isSparkling == wine2.isSparkling &&
+        wine1.quantity == wine2.quantity;
   }
 
   void _toggleEditMode() {
@@ -118,7 +121,7 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
 
     final updatedWine = _getCurrentData();
     await wineBox.putAt(widget.wineIndex, updatedWine);
-    
+
     setState(() {
       originalWine = updatedWine;
       _hasChanges = false;
@@ -141,7 +144,8 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Удалить вино?'),
-        content: Text('Вы уверены, что хотите удалить "${originalWine.name}" из перечня?'),
+        content: Text(
+            'Вы уверены, что хотите удалить "${originalWine.name}" из перечня?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -158,7 +162,7 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
 
     if (confirmed == true) {
       await wineBox.deleteAt(widget.wineIndex);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -233,8 +237,8 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.wine_bar_outlined, 
-                        color: Colors.grey.shade700, size: 20),
+                      Icon(Icons.wine_bar_outlined,
+                          color: Colors.grey.shade700, size: 20),
                       const SizedBox(width: 8),
                       const Text(
                         "Название вина",
@@ -248,36 +252,38 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
                   ),
                   const SizedBox(height: 12),
                   _isEditMode
-                    ? TextFormField(
-                        controller: _nameController,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Пожалуйста, введите название вина';
-                          }
-                          return null;
-                        },
-                        onChanged: (_) => _checkForChanges(),
-                      )
-                    : Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: Text(
-                          _nameController.text,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
+                      ? TextFormField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 14),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Пожалуйста, введите название вина';
+                            }
+                            return null;
+                          },
+                          onChanged: (_) => _checkForChanges(),
+                        )
+                      : Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Text(
+                            _nameController.text,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
-                      ),
                 ],
               ),
             ),
@@ -308,8 +314,8 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.public_outlined, 
-                              color: Colors.grey.shade700, size: 20),
+                            Icon(Icons.public_outlined,
+                                color: Colors.grey.shade700, size: 20),
                             const SizedBox(width: 8),
                             const Text(
                               "Страна",
@@ -323,46 +329,51 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
                         ),
                         const SizedBox(height: 12),
                         _isEditMode
-                          ? DropdownButtonFormField<String>(
-                              value: _selectedCountry,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              ),
-                              items: _countries.map((country) {
-                                return DropdownMenuItem(
-                                  value: country,
-                                  child: Text(country),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedCountry = value;
-                                });
-                                _checkForChanges();
-                              },
-                            )
-                          : Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: Text(
-                                _selectedCountry ?? 'Не указано',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: _selectedCountry != null ? Colors.black87 : Colors.grey.shade600,
+                            ? DropdownButtonFormField<String>(
+                                value: _selectedCountry,
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 14),
+                                ),
+                                items: _countries.map((country) {
+                                  return DropdownMenuItem(
+                                    value: country,
+                                    child: Text(country),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedCountry = value;
+                                  });
+                                  _checkForChanges();
+                                },
+                              )
+                            : Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border:
+                                      Border.all(color: Colors.grey.shade300),
+                                ),
+                                child: Text(
+                                  _selectedCountry ?? 'Не указано',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: _selectedCountry != null
+                                        ? Colors.black87
+                                        : Colors.grey.shade600,
+                                  ),
                                 ),
                               ),
-                            ),
                       ],
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(width: 12),
 
                 // Год
@@ -386,8 +397,8 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.calendar_today_outlined, 
-                              color: Colors.grey.shade700, size: 20),
+                            Icon(Icons.calendar_today_outlined,
+                                color: Colors.grey.shade700, size: 20),
                             const SizedBox(width: 8),
                             const Text(
                               "Год",
@@ -401,41 +412,52 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
                         ),
                         const SizedBox(height: 12),
                         _isEditMode
-                          ? TextFormField(
-                              controller: _yearController,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              ),
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                              validator: (value) {
-                                if (value != null && value.isNotEmpty) {
-                                  final year = int.tryParse(value);
-                                  if (year == null || year < 1800 || year > DateTime.now().year + 2) {
-                                    return 'Некорректный год';
+                            ? TextFormField(
+                                controller: _yearController,
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 14),
+                                ),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly
+                                ],
+                                validator: (value) {
+                                  if (value != null && value.isNotEmpty) {
+                                    final year = int.tryParse(value);
+                                    if (year == null ||
+                                        year < 1800 ||
+                                        year > DateTime.now().year + 2) {
+                                      return 'Некорректный год';
+                                    }
                                   }
-                                }
-                                return null;
-                              },
-                              onChanged: (_) => _checkForChanges(),
-                            )
-                          : Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: Text(
-                                _yearController.text.isNotEmpty ? _yearController.text : 'Не указан',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: _yearController.text.isNotEmpty ? Colors.black87 : Colors.grey.shade600,
+                                  return null;
+                                },
+                                onChanged: (_) => _checkForChanges(),
+                              )
+                            : Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border:
+                                      Border.all(color: Colors.grey.shade300),
+                                ),
+                                child: Text(
+                                  _yearController.text.isNotEmpty
+                                      ? _yearController.text
+                                      : 'Не указан',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: _yearController.text.isNotEmpty
+                                        ? Colors.black87
+                                        : Colors.grey.shade600,
+                                  ),
                                 ),
                               ),
-                            ),
                       ],
                     ),
                   ),
@@ -464,8 +486,8 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.palette_outlined, 
-                        color: Colors.grey.shade700, size: 20),
+                      Icon(Icons.palette_outlined,
+                          color: Colors.grey.shade700, size: 20),
                       const SizedBox(width: 8),
                       const Text(
                         "Цвет вина",
@@ -479,94 +501,104 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
                   ),
                   const SizedBox(height: 16),
                   _isEditMode
-                    ? Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        children: _wineColors.entries.map((entry) {
-                          final isSelected = _selectedColor == entry.key;
-                          return GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectedColor = entry.key;
-                              });
-                              _checkForChanges();
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: isSelected ? entry.value.withOpacity(0.1) : Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isSelected ? entry.value : Colors.grey.shade300,
-                                  width: isSelected ? 2 : 1,
+                      ? Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: _wineColors.entries.map((entry) {
+                            final isSelected = _selectedColor == entry.key;
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedColor = entry.key;
+                                });
+                                _checkForChanges();
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? entry.value.withOpacity(0.1)
+                                      : Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? entry.value
+                                        : Colors.grey.shade300,
+                                    width: isSelected ? 2 : 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 12,
+                                      height: 12,
+                                      decoration: BoxDecoration(
+                                        color: entry.value,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      entry.key,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w600
+                                            : FontWeight.w500,
+                                        color: isSelected
+                                            ? entry.value
+                                            : Colors.grey.shade700,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 12,
-                                    height: 12,
-                                    decoration: BoxDecoration(
-                                      color: entry.value,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    entry.key,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                                      color: isSelected ? entry.value : Colors.grey.shade700,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            );
+                          }).toList(),
+                        )
+                      : Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: _selectedColor != null
+                                ? _getWineColor(_selectedColor).withOpacity(0.1)
+                                : Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _selectedColor != null
+                                  ? _getWineColor(_selectedColor)
+                                  : Colors.grey.shade300,
                             ),
-                          );
-                        }).toList(),
-                      )
-                    : Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: _selectedColor != null 
-                            ? _getWineColor(_selectedColor).withOpacity(0.1) 
-                            : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _selectedColor != null 
-                              ? _getWineColor(_selectedColor) 
-                              : Colors.grey.shade300,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: _selectedColor != null
+                                      ? _getWineColor(_selectedColor)
+                                      : Colors.grey.shade400,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _selectedColor ?? 'Не указан',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: _selectedColor != null
+                                      ? _getWineColor(_selectedColor)
+                                      : Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 12,
-                              height: 12,
-                              decoration: BoxDecoration(
-                                color: _selectedColor != null 
-                                  ? _getWineColor(_selectedColor) 
-                                  : Colors.grey.shade400,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _selectedColor ?? 'Не указан',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: _selectedColor != null 
-                                  ? _getWineColor(_selectedColor) 
-                                  : Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                 ],
               ),
             ),
@@ -597,8 +629,8 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.bubble_chart_outlined, 
-                              color: Colors.grey.shade700, size: 20),
+                            Icon(Icons.bubble_chart_outlined,
+                                color: Colors.grey.shade700, size: 20),
                             const SizedBox(width: 8),
                             const Text(
                               "Игристое",
@@ -612,34 +644,36 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
                         ),
                         const SizedBox(height: 12),
                         _isEditMode
-                          ? SwitchListTile(
-                              value: _isSparkling,
-                              onChanged: (value) {
-                                setState(() {
-                                  _isSparkling = value;
-                                });
-                                _checkForChanges();
-                              },
-                              title: Text(
-                                _isSparkling ? 'Да' : 'Нет',
-                                style: const TextStyle(fontSize: 14),
+                            ? SwitchListTile(
+                                value: _isSparkling,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _isSparkling = value;
+                                  });
+                                  _checkForChanges();
+                                },
+                                title: Text(
+                                  _isSparkling ? 'Да' : 'Нет',
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                                contentPadding: EdgeInsets.zero,
+                                activeColor: Colors.amber.shade600,
+                              )
+                            : Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border:
+                                      Border.all(color: Colors.grey.shade300),
+                                ),
+                                child: Text(
+                                  _isSparkling ? 'Да' : 'Нет',
+                                  style: const TextStyle(fontSize: 16),
+                                ),
                               ),
-                              contentPadding: EdgeInsets.zero,
-                              activeColor: Colors.amber.shade600,
-                            )
-                          : Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: Text(
-                                _isSparkling ? 'Да' : 'Нет',
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ),
                       ],
                     ),
                   ),
@@ -668,8 +702,8 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.inventory_outlined, 
-                              color: Colors.grey.shade700, size: 20),
+                            Icon(Icons.inventory_outlined,
+                                color: Colors.grey.shade700, size: 20),
                             const SizedBox(width: 8),
                             const Text(
                               "Количество",
@@ -683,40 +717,45 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
                         ),
                         const SizedBox(height: 12),
                         _isEditMode
-                          ? TextFormField(
-                              controller: _quantityController,
-                              decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                suffixText: 'бут.',
+                            ? TextFormField(
+                                controller: _quantityController,
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 14),
+                                  suffixText: 'бут.',
+                                ),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly
+                                ],
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Обязательно';
+                                  }
+                                  final quantity = int.tryParse(value);
+                                  if (quantity == null || quantity <= 0) {
+                                    return 'Больше 0';
+                                  }
+                                  return null;
+                                },
+                                onChanged: (_) => _checkForChanges(),
+                              )
+                            : Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border:
+                                      Border.all(color: Colors.grey.shade300),
+                                ),
+                                child: Text(
+                                  '${_quantityController.text} бут.',
+                                  style: const TextStyle(fontSize: 16),
+                                ),
                               ),
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Обязательно';
-                                }
-                                final quantity = int.tryParse(value);
-                                if (quantity == null || quantity <= 0) {
-                                  return 'Больше 0';
-                                }
-                                return null;
-                              },
-                              onChanged: (_) => _checkForChanges(),
-                            )
-                          : Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: Text(
-                                '${_quantityController.text} бут.',
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ),
                       ],
                     ),
                   ),
@@ -730,14 +769,18 @@ class _WineDetailScreenState extends State<WineDetailScreen> {
             if (_isEditMode) ...[
               // Кнопка сохранения/закрытия в режиме редактирования
               ElevatedButton(
-                onPressed: _hasChanges ? _saveChanges : () {
-                  setState(() {
-                    _isEditMode = false;
-                    _hasChanges = false;
-                  });
-                },
+                onPressed: _hasChanges
+                    ? _saveChanges
+                    : () {
+                        setState(() {
+                          _isEditMode = false;
+                          _hasChanges = false;
+                        });
+                      },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _hasChanges ? const Color(0xFF4A90E2) : Colors.grey.shade400,
+                  backgroundColor: _hasChanges
+                      ? const Color(0xFF4A90E2)
+                      : Colors.grey.shade400,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(

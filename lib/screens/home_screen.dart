@@ -6,6 +6,7 @@ import 'package:winekeeper/screens/admin_users_screen.dart';
 import 'package:winekeeper/screens/login_screen.dart';
 import 'package:winekeeper/screens/add_wine_screen.dart';
 import 'package:winekeeper/screens/wine_detail_screen.dart';
+import 'package:winekeeper/core/app_theme.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -73,18 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Color _getWineColor(String? color) {
-    switch (color?.toLowerCase()) {
-      case 'красное':
-        return Colors.red.shade700;
-      case 'белое':
-        return Colors.amber.shade600;
-      case 'розовое':
-        return Colors.pink.shade400;
-      case 'оранжевое':
-        return Colors.orange.shade600;
-      default:
-        return Colors.grey.shade600;
-    }
+    return AppTheme.getWineColor(color);
   }
 
   String _getWineColorName(String? color) {

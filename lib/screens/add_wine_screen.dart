@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:winekeeper/models/wine_bottle.dart';
+import 'package:winekeeper/core/app_theme.dart';
 
 class AddWineScreen extends StatefulWidget {
   const AddWineScreen({super.key});
@@ -15,16 +16,16 @@ class _AddWineScreenState extends State<AddWineScreen> {
   final _nameController = TextEditingController();
   final _yearController = TextEditingController();
   final _quantityController = TextEditingController();
-  
+
   String? _selectedCountry;
   String? _selectedColor;
   bool _isSparkling = false;
-  
+
   late Box<WineBottle> wineBox;
 
   final List<String> _countries = [
     'Франция',
-    'Италия', 
+    'Италия',
     'Испания',
     'Германия',
     'Португалия',
@@ -40,10 +41,10 @@ class _AddWineScreenState extends State<AddWineScreen> {
   ];
 
   final Map<String, Color> _wineColors = {
-    'Красное': Colors.red.shade700,
-    'Белое': Colors.amber.shade600,
-    'Розовое': Colors.pink.shade400,
-    'Оранжевое': Colors.orange.shade600,
+    'Красное': AppTheme.wineRed,
+    'Белое': AppTheme.wineWhite,
+    'Розовое': AppTheme.wineRose,
+    'Оранжевое': AppTheme.wineOrange,
   };
 
   @override
@@ -69,14 +70,16 @@ class _AddWineScreenState extends State<AddWineScreen> {
     final wine = WineBottle(
       name: _nameController.text.trim(),
       country: _selectedCountry,
-      year: _yearController.text.isNotEmpty ? int.parse(_yearController.text) : null,
+      year: _yearController.text.isNotEmpty
+          ? int.parse(_yearController.text)
+          : null,
       color: _selectedColor,
       isSparkling: _isSparkling,
       quantity: int.parse(_quantityController.text),
     );
 
     await wineBox.add(wine);
-    
+
     if (mounted) {
       // Показываем уведомление об успехе
       ScaffoldMessenger.of(context).showSnackBar(
@@ -86,7 +89,7 @@ class _AddWineScreenState extends State<AddWineScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      
+
       // Возвращаемся на главный экран
       Navigator.pop(context);
     }
@@ -132,8 +135,8 @@ class _AddWineScreenState extends State<AddWineScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.wine_bar_outlined, 
-                        color: Colors.grey.shade700, size: 20),
+                      Icon(Icons.wine_bar_outlined,
+                          color: Colors.grey.shade700, size: 20),
                       const SizedBox(width: 8),
                       const Text(
                         "Название вина",
@@ -155,7 +158,8 @@ class _AddWineScreenState extends State<AddWineScreen> {
                     decoration: const InputDecoration(
                       hintText: "Например: Château Margaux",
                       border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
@@ -194,8 +198,8 @@ class _AddWineScreenState extends State<AddWineScreen> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.public_outlined, 
-                              color: Colors.grey.shade700, size: 20),
+                            Icon(Icons.public_outlined,
+                                color: Colors.grey.shade700, size: 20),
                             const SizedBox(width: 8),
                             const Text(
                               "Страна",
@@ -213,7 +217,8 @@ class _AddWineScreenState extends State<AddWineScreen> {
                           decoration: const InputDecoration(
                             hintText: "Выберите",
                             border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 14),
                           ),
                           items: _countries.map((country) {
                             return DropdownMenuItem(
@@ -231,7 +236,7 @@ class _AddWineScreenState extends State<AddWineScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(width: 12),
 
                 // Год
@@ -255,8 +260,8 @@ class _AddWineScreenState extends State<AddWineScreen> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.calendar_today_outlined, 
-                              color: Colors.grey.shade700, size: 20),
+                            Icon(Icons.calendar_today_outlined,
+                                color: Colors.grey.shade700, size: 20),
                             const SizedBox(width: 8),
                             const Text(
                               "Год",
@@ -274,14 +279,19 @@ class _AddWineScreenState extends State<AddWineScreen> {
                           decoration: const InputDecoration(
                             hintText: "2020",
                             border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 14),
                           ),
                           keyboardType: TextInputType.number,
-                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly
+                          ],
                           validator: (value) {
                             if (value != null && value.isNotEmpty) {
                               final year = int.tryParse(value);
-                              if (year == null || year < 1800 || year > DateTime.now().year + 2) {
+                              if (year == null ||
+                                  year < 1800 ||
+                                  year > DateTime.now().year + 2) {
                                 return 'Некорректный год';
                               }
                             }
@@ -316,8 +326,8 @@ class _AddWineScreenState extends State<AddWineScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.palette_outlined, 
-                        color: Colors.grey.shade700, size: 20),
+                      Icon(Icons.palette_outlined,
+                          color: Colors.grey.shade700, size: 20),
                       const SizedBox(width: 8),
                       const Text(
                         "Цвет вина",
@@ -342,12 +352,17 @@ class _AddWineScreenState extends State<AddWineScreen> {
                           });
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: isSelected ? entry.value.withOpacity(0.1) : Colors.grey.shade50,
+                            color: isSelected
+                                ? entry.value.withOpacity(0.1)
+                                : Colors.grey.shade50,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: isSelected ? entry.value : Colors.grey.shade300,
+                              color: isSelected
+                                  ? entry.value
+                                  : Colors.grey.shade300,
                               width: isSelected ? 2 : 1,
                             ),
                           ),
@@ -367,8 +382,12 @@ class _AddWineScreenState extends State<AddWineScreen> {
                                 entry.key,
                                 style: TextStyle(
                                   fontSize: 14,
-                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                                  color: isSelected ? entry.value : Colors.grey.shade700,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                  color: isSelected
+                                      ? entry.value
+                                      : Colors.grey.shade700,
                                 ),
                               ),
                             ],
@@ -407,8 +426,8 @@ class _AddWineScreenState extends State<AddWineScreen> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.bubble_chart_outlined, 
-                              color: Colors.grey.shade700, size: 20),
+                            Icon(Icons.bubble_chart_outlined,
+                                color: Colors.grey.shade700, size: 20),
                             const SizedBox(width: 8),
                             const Text(
                               "Игристое",
@@ -463,8 +482,8 @@ class _AddWineScreenState extends State<AddWineScreen> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.inventory_outlined, 
-                              color: Colors.grey.shade700, size: 20),
+                            Icon(Icons.inventory_outlined,
+                                color: Colors.grey.shade700, size: 20),
                             const SizedBox(width: 8),
                             const Text(
                               "Количество",
@@ -486,11 +505,14 @@ class _AddWineScreenState extends State<AddWineScreen> {
                           decoration: const InputDecoration(
                             hintText: "1",
                             border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 14),
                             suffixText: 'бут.',
                           ),
                           keyboardType: TextInputType.number,
-                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly
+                          ],
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
                               return 'Обязательно';

@@ -4,6 +4,7 @@ import 'package:winekeeper/screens/login_screen.dart';
 import 'package:winekeeper/screens/home_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:winekeeper/models/wine_bottle.dart';
+import 'package:winekeeper/core/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +35,7 @@ class WineKeeperApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'WineKeeper',
-      theme: ThemeData(primarySwatch: Colors.deepPurple),
+      theme: AppTheme.light(), // вместо старой темы
       home: isLoggedIn ? const HomeScreen() : const LoginScreen(),
     );
   }
