@@ -4,18 +4,19 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:winekeeper/models/wine_card.dart';
 import 'package:winekeeper/core/app_theme.dart';
 
-class AddWineScreen extends StatefulWidget {
-  const AddWineScreen({super.key});
+class EditWineScreen extends StatefulWidget {
+  final WineCard wineCard;
+
+  const EditWineScreen({super.key, required this.wineCard});
 
   @override
-  State<AddWineScreen> createState() => _AddWineScreenState();
+  State<EditWineScreen> createState() => _EditWineScreenState();
 }
 
-class _AddWineScreenState extends State<AddWineScreen> {
+class _EditWineScreenState extends State<EditWineScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _yearController = TextEditingController();
-
   final _customVolumeController = TextEditingController();
 
   String? _selectedCountry;
@@ -23,6 +24,7 @@ class _AddWineScreenState extends State<AddWineScreen> {
   bool _isSparkling = false;
   double? _selectedVolume;
   bool _useCustomVolume = false;
+  bool _hasChanges = false;
 
   late Box<WineCard> cardsBox;
 
@@ -57,7 +59,53 @@ class _AddWineScreenState extends State<AddWineScreen> {
   void initState() {
     super.initState();
     cardsBox = Hive.box<WineCard>('wine_cards');
-    _selectedVolume = 0.750; // По умолчанию стандартная бутылка
+    _loadExistingData();
+  }
+
+  void _loadExistingData() {
+    // Заполняем поля данными существующей карточки
+    _nameController.text = widget.wineCard.name;
+    _yearController.text = widget.wineCard.year?.toString() ?? '';
+    _selectedCountry = widget.wineCard.country;
+    _selectedColor = widget.wineCard.color;
+    _isSparkling = widget.wineCard.isSparkling;
+
+    // Проверяем, является ли объем стандартным
+    if (WineCard.standardVolumes.contains(widget.wineCard.volume)) {
+      _selectedVolume = widget.wineCard.volume;
+      _useCustomVolume = false;
+    } else {
+      _selectedVolume = 0.750; // по умолчанию
+      _useCustomVolume = true;
+      _customVolumeController.text = widget.wineCard.volume.toStringAsFixed(3);
+    }
+  }
+
+  void _checkForChanges() {
+    double finalVolume;
+    if (_useCustomVolume) {
+      finalVolume =
+          double.tryParse(_customVolumeController.text.replaceAll(',', '.')) ??
+              widget.wineCard.volume;
+    } else {
+      finalVolume = _selectedVolume!;
+    }
+
+    final hasChanges = _nameController.text.trim() != widget.wineCard.name ||
+        (_yearController.text.isEmpty
+                ? null
+                : int.tryParse(_yearController.text)) !=
+            widget.wineCard.year ||
+        _selectedCountry != widget.wineCard.country ||
+        _selectedColor != widget.wineCard.color ||
+        _isSparkling != widget.wineCard.isSparkling ||
+        finalVolume != widget.wineCard.volume;
+
+    if (hasChanges != _hasChanges) {
+      setState(() {
+        _hasChanges = hasChanges;
+      });
+    }
   }
 
   @override
@@ -68,7 +116,7 @@ class _AddWineScreenState extends State<AddWineScreen> {
     super.dispose();
   }
 
-  void _saveCard() async {
+  void _saveChanges() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -82,8 +130,9 @@ class _AddWineScreenState extends State<AddWineScreen> {
       finalVolume = _selectedVolume!;
     }
 
-    final card = WineCard(
-      id: WineCard.generateId(),
+    // Создаем обновленную карточку
+    final updatedCard = WineCard(
+      id: widget.wineCard.id, // сохраняем тот же ID
       name: _nameController.text.trim(),
       volume: finalVolume,
       country: _selectedCountry,
@@ -92,20 +141,21 @@ class _AddWineScreenState extends State<AddWineScreen> {
           : null,
       color: _selectedColor,
       isSparkling: _isSparkling,
+      createdAt: widget.wineCard.createdAt, // сохраняем дату создания
     );
 
-    await cardsBox.put(card.id, card);
+    await cardsBox.put(updatedCard.id, updatedCard);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Карточка "${card.name}" создана'),
-          backgroundColor: AppTheme.success, // Success цвет
+          content: Text('Карточка "${updatedCard.name}" обновлена'),
+          backgroundColor: AppTheme.success,
           behavior: SnackBarBehavior.floating,
         ),
       );
 
-      Navigator.pop(context);
+      Navigator.pop(context, updatedCard); // возвращаем обновленную карточку
     }
   }
 
@@ -149,6 +199,7 @@ class _AddWineScreenState extends State<AddWineScreen> {
                   setState(() {
                     _selectedVolume = volume;
                   });
+                  _checkForChanges();
                 },
                 child: Container(
                   padding:
@@ -186,7 +237,8 @@ class _AddWineScreenState extends State<AddWineScreen> {
               setState(() {
                 _useCustomVolume = true;
                 _customVolumeController.text =
-                    _selectedVolume?.toStringAsFixed(3) ?? '';
+                    _selectedVolume?.toStringAsFixed(3) ??
+                        widget.wineCard.volume.toStringAsFixed(3);
               });
             },
             icon: const Icon(Icons.edit_outlined, size: 18),
@@ -226,6 +278,7 @@ class _AddWineScreenState extends State<AddWineScreen> {
                     }
                     return null;
                   },
+                  onChanged: (_) => _checkForChanges(),
                 ),
               ),
               const SizedBox(width: 12),
@@ -235,6 +288,7 @@ class _AddWineScreenState extends State<AddWineScreen> {
                     _useCustomVolume = false;
                     _selectedVolume = 0.750;
                   });
+                  _checkForChanges();
                 },
                 child: const Text('Отмена'),
               ),
@@ -250,9 +304,9 @@ class _AddWineScreenState extends State<AddWineScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-        title: const Text(
-          "Создать карточку вина",
-          style: TextStyle(fontWeight: FontWeight.w600),
+        title: Text(
+          "Редактировать «${widget.wineCard.name}»",
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -267,6 +321,34 @@ class _AddWineScreenState extends State<AddWineScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Предупреждение об изменении объема
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_outlined,
+                      color: Colors.orange.shade700, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Изменение объема повлияет на расчет общего объема для всех привязанных бутылок.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.orange.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
             // Название вина
             Container(
               padding: const EdgeInsets.all(20),
@@ -312,6 +394,7 @@ class _AddWineScreenState extends State<AddWineScreen> {
                       }
                       return null;
                     },
+                    onChanged: (_) => _checkForChanges(),
                   ),
                 ],
               ),
@@ -369,6 +452,7 @@ class _AddWineScreenState extends State<AddWineScreen> {
                             setState(() {
                               _selectedCountry = value;
                             });
+                            _checkForChanges();
                           },
                         ),
                       ],
@@ -430,6 +514,7 @@ class _AddWineScreenState extends State<AddWineScreen> {
                             }
                             return null;
                           },
+                          onChanged: (_) => _checkForChanges(),
                         ),
                       ],
                     ),
@@ -490,6 +575,7 @@ class _AddWineScreenState extends State<AddWineScreen> {
                           setState(() {
                             _selectedColor = entry.key;
                           });
+                          _checkForChanges();
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
@@ -575,6 +661,7 @@ class _AddWineScreenState extends State<AddWineScreen> {
                       setState(() {
                         _isSparkling = value;
                       });
+                      _checkForChanges();
                     },
                     title: Text(
                       _isSparkling ? 'Да' : 'Нет',
@@ -589,57 +676,52 @@ class _AddWineScreenState extends State<AddWineScreen> {
 
             const SizedBox(height: 32),
 
-            // Кнопка создания карточки
-            ElevatedButton(
-              onPressed: _saveCard,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-              child: const Text(
-                "Создать карточку вина",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Подсказка
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .secondary
-                    .withOpacity(0.3), // Pastel Pink
-                borderRadius: BorderRadius.circular(12),
-                border:
-                    Border.all(color: Theme.of(context).colorScheme.secondary),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline,
-                      color: Theme.of(context).colorScheme.onSurface, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'После создания карточки вы сможете привязать к ней конкретные бутылки, отсканировав их штрихкоды.',
+            // Кнопки сохранения/отмены
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      "Отмена",
                       style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _hasChanges ? _saveChanges : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _hasChanges
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.grey.shade400,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      "Сохранить",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 16),

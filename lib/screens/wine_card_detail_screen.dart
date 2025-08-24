@@ -4,6 +4,7 @@ import 'package:winekeeper/models/wine_card.dart';
 import 'package:winekeeper/models/wine_bottle.dart';
 import 'package:winekeeper/screens/barcode_scanner_screen.dart';
 import 'package:winekeeper/core/app_theme.dart';
+import 'package:winekeeper/screens/edit_wine_screen.dart';
 
 class WineCardDetailScreen extends StatefulWidget {
   final String cardId;
@@ -95,13 +96,14 @@ class _WineCardDetailScreenState extends State<WineCardDetailScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F9FC),
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
         title: Text(
           wineCard!.name,
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
       ),
       body: ValueListenableBuilder(
@@ -162,7 +164,8 @@ class _WineCardDetailScreenState extends State<WineCardDetailScreen> {
                         ),
                         if (wineCard!.isSparkling)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: Colors.amber.shade100,
                               borderRadius: BorderRadius.circular(12),
@@ -170,7 +173,8 @@ class _WineCardDetailScreenState extends State<WineCardDetailScreen> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.bubble_chart, size: 14, color: Colors.amber.shade700),
+                                Icon(Icons.bubble_chart,
+                                    size: 14, color: Colors.amber.shade700),
                                 const SizedBox(width: 4),
                                 Text(
                                   "Игристое",
@@ -186,7 +190,7 @@ class _WineCardDetailScreenState extends State<WineCardDetailScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    
+
                     // Статистика
                     Row(
                       children: [
@@ -287,10 +291,42 @@ class _WineCardDetailScreenState extends State<WineCardDetailScreen> {
 
               const SizedBox(height: 16),
 
-              // Кнопки действий
-              Row(
+              // Кнопки действий - вертикальное размещение
+              Column(
                 children: [
-                  Expanded(
+                  // Кнопка редактирования карточки
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final updatedCard = await Navigator.push<WineCard>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                EditWineScreen(wineCard: wineCard!),
+                          ),
+                        );
+                        if (updatedCard != null) {
+                          setState(() {
+                            wineCard = updatedCard;
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Редактировать карточку'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Кнопка добавления бутылок
+                  SizedBox(
+                    width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () {
                         Navigator.push(
@@ -306,14 +342,18 @@ class _WineCardDetailScreenState extends State<WineCardDetailScreen> {
                       icon: const Icon(Icons.add_circle_outline),
                       label: const Text('Добавить бутылки'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: AppTheme.success,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
+
+                  const SizedBox(height: 12),
+
+                  // Кнопка продажи
+                  SizedBox(
+                    width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: activeBottles.isNotEmpty
                           ? () {
@@ -329,9 +369,9 @@ class _WineCardDetailScreenState extends State<WineCardDetailScreen> {
                             }
                           : null,
                       icon: const Icon(Icons.remove_circle_outline),
-                      label: const Text('Продать'),
+                      label: const Text('Продать бутылку'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
+                        backgroundColor: AppTheme.warning,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -410,7 +450,8 @@ class _WineCardDetailScreenState extends State<WineCardDetailScreen> {
                   ),
                   child: Column(
                     children: [
-                      Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey.shade400),
+                      Icon(Icons.inventory_2_outlined,
+                          size: 48, color: Colors.grey.shade400),
                       const SizedBox(height: 12),
                       const Text(
                         'Нет бутылок в наличии',

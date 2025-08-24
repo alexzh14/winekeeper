@@ -79,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Карточка "${card.name}" удалена'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -182,8 +182,12 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text("Винотека",
             style: TextStyle(fontWeight: FontWeight.w600)),
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface, // Ivory
+        foregroundColor:
+            Theme.of(context).colorScheme.onSurface, // Dark Chocolate
         elevation: 0,
+        iconTheme: IconThemeData(
+            color: Theme.of(context).colorScheme.onSurface), // иконки темные
         actions: [
           // Кнопка тестовых данных (только для разработки)
           IconButton(
@@ -528,7 +532,7 @@ class _HomeScreenState extends State<HomeScreen> {
             MaterialPageRoute(builder: (context) => const AddWineScreen()),
           );
         },
-        backgroundColor: const Color(0xFF4A90E2),
+        backgroundColor: Theme.of(context).colorScheme.primary,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text(
           "Создать карточку",

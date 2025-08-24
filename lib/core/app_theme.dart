@@ -1,22 +1,31 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Основная цветовая палитра (теплые пастельные тона)
-  static const Color _primary = Color(0xFFFF8A65);        // Теплый коралловый
-  static const Color _primaryLight = Color(0xFFFFAB91);   // Светлый коралловый
-  static const Color _secondary = Color(0xFFFFCC80);      // Персиковый
-  static const Color _tertiary = Color(0xFF81C784);       // Мятно-зеленый
-  
-  // Фоновые цвета
-  static const Color _surface = Color(0xFFFCFCFC);        // Почти белый
-  static const Color _background = Color(0xFFF8F9FA);     // Очень светло-серый
-  
-  // Текстовые цвета
-  static const Color _onSurface = Color(0xFF1A1C1E);      // Темно-серый
-  static const Color _onSurfaceVariant = Color(0xFF6C7278); // Средне-серый
-  
-  // Контурные цвета
-  static const Color _outline = Color(0xFFE1E4EA);        // Светло-серый для границ
+  // Основная цветовая палитра (новая мягкая схема)
+static const Color _primary = Color(0xFFFF857A);        // Coral
+static const Color _primaryLight = Color(0xFFE26C64);   // Hover Coral
+static const Color _secondary = Color(0xFFFFD6D1);     // Pastel Pink
+static const Color _tertiary = Color(0xFF9EB89C);      // Light Olive
+
+// Фоновые цвета
+static const Color _surface = Color(0xFFFAF5EF);       // Ivory (основной фон)
+static const Color _background = Color(0xFFFAF5EF);    // Ivory (фон приложения)
+
+// Текстовые цвета
+static const Color _onSurface = Color(0xFF362C2A);     // Dark Chocolate
+static const Color _onSurfaceVariant = Color(0xFFA3A3A3); // Medium Gray
+
+// Контурные цвета
+static const Color _outline = Color(0xFFE6E6E6);       // Light Gray
+// Служебные цвета для состояний
+static const Color success = Color(0xFF7DBE7F);     // Success
+static const Color warning = Color(0xFFFFC072);     // Warning
+static const Color error = Color(0xFFE64C4C);       // Error
+static const Color hoverOlive = Color(0xFF7FA682);  // Hover Olive
+
+// Вспомогательные серые
+static const Color lightGray = Color(0xFFE6E6E6);   // Light Gray
+static const Color mediumGray = Color(0xFFA3A3A3);  // Medium Gray
 
   static ThemeData light() {
     return ThemeData(
@@ -156,9 +165,9 @@ class AppTheme {
 
   // Специальные цвета для вин
   static const Color wineRed = Color(0xFFE57373);      // Мягкий красный
-  static const Color wineWhite = Color(0xFFFFF176);    // Желтоватый
+  static const Color wineWhite = Color(0xFFFFC072);    // Желтоватый
   static const Color wineRose = Color(0xFFF06292);     // Розовый
-  static const Color wineOrange = Color(0xFFFFB74D);   // Персиковый
+  static const Color wineOrange = Color.fromARGB(255, 211, 127, 1);   // Персиковый
 
   // Вспомогательный метод для получения цвета вина
   static Color getWineColor(String? color) {
