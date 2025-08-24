@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:winekeeper/models/wine_bottle.dart';
+import 'package:winekeeper/models/wine_card.dart';
 import 'package:winekeeper/core/app_theme.dart';
 
 class AddWineScreen extends StatefulWidget {
@@ -15,13 +15,16 @@ class _AddWineScreenState extends State<AddWineScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _yearController = TextEditingController();
-  final _quantityController = TextEditingController();
+
+  final _customVolumeController = TextEditingController();
 
   String? _selectedCountry;
   String? _selectedColor;
   bool _isSparkling = false;
+  double? _selectedVolume;
+  bool _useCustomVolume = false;
 
-  late Box<WineBottle> wineBox;
+  late Box<WineCard> cardsBox;
 
   final List<String> _countries = [
     'Франция',
@@ -38,6 +41,9 @@ class _AddWineScreenState extends State<AddWineScreen> {
     'Аргентина',
     'Австралия',
     'ЮАР',
+    'Новая Зеландия',
+    'Канада',
+    'Южная Африка',
   ];
 
   final Map<String, Color> _wineColors = {
@@ -50,49 +56,183 @@ class _AddWineScreenState extends State<AddWineScreen> {
   @override
   void initState() {
     super.initState();
-    wineBox = Hive.box<WineBottle>('wine_bottles');
-    _quantityController.text = '1'; // По умолчанию 1 бутылка
+    cardsBox = Hive.box<WineCard>('wine_cards');
+    _selectedVolume = 0.750; // По умолчанию стандартная бутылка
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _yearController.dispose();
-    _quantityController.dispose();
+    _customVolumeController.dispose();
     super.dispose();
   }
 
-  void _saveWine() async {
+  void _saveCard() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    final wine = WineBottle(
+    // Определяем финальный объем
+    double finalVolume;
+    if (_useCustomVolume) {
+      finalVolume = double.parse(_customVolumeController.text.replaceAll(',', '.'));
+    } else {
+      finalVolume = _selectedVolume!;
+    }
+
+    final card = WineCard(
+      id: WineCard.generateId(),
       name: _nameController.text.trim(),
+      volume: finalVolume,
       country: _selectedCountry,
-      year: _yearController.text.isNotEmpty
-          ? int.parse(_yearController.text)
-          : null,
+      year: _yearController.text.isNotEmpty ? int.parse(_yearController.text) : null,
       color: _selectedColor,
       isSparkling: _isSparkling,
-      quantity: int.parse(_quantityController.text),
     );
 
-    await wineBox.add(wine);
+    await cardsBox.put(card.id, card);
 
     if (mounted) {
-      // Показываем уведомление об успехе
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Вино "${wine.name}" добавлено в перечень'),
+          content: Text('Карточка "${card.name}" создана'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
       );
 
-      // Возвращаемся на главный экран
       Navigator.pop(context);
     }
+  }
+
+  Widget _buildVolumeSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.local_drink_outlined, color: Colors.grey.shade700, size: 20),
+            const SizedBox(width: 8),
+            const Text(
+              "Объем одной бутылки",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            const Text(
+              " *",
+              style: TextStyle(color: Colors.red, fontSize: 16),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Стандартные объемы
+        if (!_useCustomVolume) ...[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: WineCard.standardVolumes.map((volume) {
+              final isSelected = _selectedVolume == volume;
+              final displayName = WineCard.volumeNames[volume] ?? '${volume.toStringAsFixed(3)} л';
+              
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedVolume = volume;
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isSelected 
+                        ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                        : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected 
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.grey.shade300,
+                      width: isSelected ? 2 : 1,
+                    ),
+                  ),
+                  child: Text(
+                    displayName,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      color: isSelected 
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.grey.shade700,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            onPressed: () {
+              setState(() {
+                _useCustomVolume = true;
+                _customVolumeController.text = _selectedVolume?.toStringAsFixed(3) ?? '';
+              });
+            },
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            label: const Text('Указать свой объем'),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey.shade700,
+            ),
+          ),
+        ],
+
+        // Пользовательский ввод объема
+        if (_useCustomVolume) ...[
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _customVolumeController,
+                  decoration: const InputDecoration(
+                    hintText: "Например: 0,750",
+                    suffixText: 'л',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
+                  ],
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Укажите объем';
+                    }
+                    final volume = double.tryParse(value.replaceAll(',', '.'));
+                    if (volume == null || volume <= 0 || volume > 50) {
+                      return 'Некорректный объем';
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _useCustomVolume = false;
+                    _selectedVolume = 0.750;
+                  });
+                },
+                child: const Text('Отмена'),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
   }
 
   @override
@@ -101,7 +241,7 @@ class _AddWineScreenState extends State<AddWineScreen> {
       backgroundColor: const Color(0xFFF7F9FC),
       appBar: AppBar(
         title: const Text(
-          "Добавить вино",
+          "Создать карточку вина",
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
         backgroundColor: Colors.white,
@@ -122,21 +262,14 @@ class _AddWineScreenState extends State<AddWineScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                boxShadow: [AppTheme.softShadow],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.wine_bar_outlined,
-                          color: Colors.grey.shade700, size: 20),
+                      Icon(Icons.wine_bar_outlined, color: Colors.grey.shade700, size: 20),
                       const SizedBox(width: 8),
                       const Text(
                         "Название вина",
@@ -158,8 +291,7 @@ class _AddWineScreenState extends State<AddWineScreen> {
                     decoration: const InputDecoration(
                       hintText: "Например: Château Margaux",
                       border: OutlineInputBorder(),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
@@ -185,21 +317,14 @@ class _AddWineScreenState extends State<AddWineScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                      boxShadow: [AppTheme.softShadow],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.public_outlined,
-                                color: Colors.grey.shade700, size: 20),
+                            Icon(Icons.public_outlined, color: Colors.grey.shade700, size: 20),
                             const SizedBox(width: 8),
                             const Text(
                               "Страна",
@@ -217,8 +342,7 @@ class _AddWineScreenState extends State<AddWineScreen> {
                           decoration: const InputDecoration(
                             hintText: "Выберите",
                             border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 14),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           ),
                           items: _countries.map((country) {
                             return DropdownMenuItem(
@@ -247,21 +371,14 @@ class _AddWineScreenState extends State<AddWineScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                      boxShadow: [AppTheme.softShadow],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.calendar_today_outlined,
-                                color: Colors.grey.shade700, size: 20),
+                            Icon(Icons.calendar_today_outlined, color: Colors.grey.shade700, size: 20),
                             const SizedBox(width: 8),
                             const Text(
                               "Год",
@@ -279,19 +396,14 @@ class _AddWineScreenState extends State<AddWineScreen> {
                           decoration: const InputDecoration(
                             hintText: "2020",
                             border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 14),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           ),
                           keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly
-                          ],
+                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                           validator: (value) {
                             if (value != null && value.isNotEmpty) {
                               final year = int.tryParse(value);
-                              if (year == null ||
-                                  year < 1800 ||
-                                  year > DateTime.now().year + 2) {
+                              if (year == null || year < 1800 || year > DateTime.now().year + 2) {
                                 return 'Некорректный год';
                               }
                             }
@@ -307,27 +419,33 @@ class _AddWineScreenState extends State<AddWineScreen> {
 
             const SizedBox(height: 16),
 
+            // Объем бутылки
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [AppTheme.softShadow],
+              ),
+              child: _buildVolumeSelector(),
+            ),
+
+            const SizedBox(height: 16),
+
             // Цвет вина
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                boxShadow: [AppTheme.softShadow],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.palette_outlined,
-                          color: Colors.grey.shade700, size: 20),
+                      Icon(Icons.palette_outlined, color: Colors.grey.shade700, size: 20),
                       const SizedBox(width: 8),
                       const Text(
                         "Цвет вина",
@@ -352,17 +470,14 @@ class _AddWineScreenState extends State<AddWineScreen> {
                           });
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
                             color: isSelected
                                 ? entry.value.withOpacity(0.1)
                                 : Colors.grey.shade50,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: isSelected
-                                  ? entry.value
-                                  : Colors.grey.shade300,
+                              color: isSelected ? entry.value : Colors.grey.shade300,
                               width: isSelected ? 2 : 1,
                             ),
                           ),
@@ -382,12 +497,8 @@ class _AddWineScreenState extends State<AddWineScreen> {
                                 entry.key,
                                 style: TextStyle(
                                   fontSize: 14,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w600
-                                      : FontWeight.w500,
-                                  color: isSelected
-                                      ? entry.value
-                                      : Colors.grey.shade700,
+                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                  color: isSelected ? entry.value : Colors.grey.shade700,
                                 ),
                               ),
                             ],
@@ -402,140 +513,55 @@ class _AddWineScreenState extends State<AddWineScreen> {
 
             const SizedBox(height: 16),
 
-            // Игристое и количество
-            Row(
-              children: [
-                // Игристое
-                Expanded(
-                  flex: 2,
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+            // Игристое вино
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [AppTheme.softShadow],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.bubble_chart_outlined, color: Colors.grey.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      const Text(
+                        "Игристое вино",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.bubble_chart_outlined,
-                                color: Colors.grey.shade700, size: 20),
-                            const SizedBox(width: 8),
-                            const Text(
-                              "Игристое",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        SwitchListTile(
-                          value: _isSparkling,
-                          onChanged: (value) {
-                            setState(() {
-                              _isSparkling = value;
-                            });
-                          },
-                          title: Text(
-                            _isSparkling ? 'Да' : 'Нет',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          contentPadding: EdgeInsets.zero,
-                          activeColor: Colors.amber.shade600,
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ),
-
-                const SizedBox(width: 12),
-
-                // Количество
-                Expanded(
-                  flex: 2,
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    value: _isSparkling,
+                    onChanged: (value) {
+                      setState(() {
+                        _isSparkling = value;
+                      });
+                    },
+                    title: Text(
+                      _isSparkling ? 'Да' : 'Нет',
+                      style: const TextStyle(fontSize: 16),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.inventory_outlined,
-                                color: Colors.grey.shade700, size: 20),
-                            const SizedBox(width: 8),
-                            const Text(
-                              "Количество",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            const Text(
-                              " *",
-                              style: TextStyle(color: Colors.red, fontSize: 16),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _quantityController,
-                          decoration: const InputDecoration(
-                            hintText: "1",
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 14),
-                            suffixText: 'бут.',
-                          ),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly
-                          ],
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Обязательно';
-                            }
-                            final quantity = int.tryParse(value);
-                            if (quantity == null || quantity <= 0) {
-                              return 'Больше 0';
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-                    ),
+                    contentPadding: EdgeInsets.zero,
+                    activeColor: Colors.amber.shade600,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
 
             const SizedBox(height: 32),
 
-            // Кнопка сохранения
+            // Кнопка создания карточки
             ElevatedButton(
-              onPressed: _saveWine,
+              onPressed: _saveCard,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF4A90E2),
                 foregroundColor: Colors.white,
@@ -546,11 +572,38 @@ class _AddWineScreenState extends State<AddWineScreen> {
                 elevation: 0,
               ),
               child: const Text(
-                "Добавить в перечень",
+                "Создать карточку вина",
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Подсказка
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'После создания карточки вы сможете привязать к ней конкретные бутылки, отсканировав их штрихкоды.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.blue.shade700,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 

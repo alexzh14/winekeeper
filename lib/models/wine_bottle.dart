@@ -1,37 +1,44 @@
 import 'package:hive/hive.dart';
 
-part 'wine_bottle.g.dart'; // для генерации адаптера
+part 'wine_bottle.g.dart';
 
-@HiveType(typeId: 0) // уникальный ID модели
+@HiveType(typeId: 1) // изменил ID, так как это теперь другая сущность
 class WineBottle {
   @HiveField(0)
-  String name;
+  String id; // уникальный ID бутылки
 
   @HiveField(1)
-  int? year;
+  String barcode; // штрихкод бутылки (уникальный)
 
   @HiveField(2)
-  String? country;
+  String cardId; // ID карточки вина к которой привязана
 
   @HiveField(3)
-  String? color; // например: "красное", "белое", "розовое"
+  bool isActive; // true = на складе, false = продана/списана
 
   @HiveField(4)
-  bool isSparkling; // игристое или нет
+  DateTime createdAt; // когда добавлена в систему
 
   @HiveField(5)
-  int quantity;
-
-  @HiveField(6)
-  String? barcode; // данные со штрихкода (может быть null, если вручную внесли)
+  String? notes; // заметки к конкретной бутылке
 
   WineBottle({
-    required this.name,
-    this.year,
-    this.country,
-    this.color,
-    this.isSparkling = false,
-    required this.quantity,
-    this.barcode,
-  });
+    required this.id,
+    required this.barcode,
+    required this.cardId,
+    this.isActive = true,
+    DateTime? createdAt,
+    this.notes,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  // Генерация уникального ID для новой бутылки
+  static String generateId() {
+    return 'bottle_${DateTime.now().millisecondsSinceEpoch}';
+  }
+
+  // Генерация тестового штрихкода
+  static String generateTestBarcode() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    return 'TEST-${timestamp.toString().substring(8)}'; // TEST-12345
+  }
 }

@@ -1,47 +1,53 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'wine_bottle.dart';
+part of 'wine_card.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class WineBottleAdapter extends TypeAdapter<WineBottle> {
+class WineCardAdapter extends TypeAdapter<WineCard> {
   @override
-  final int typeId = 1;
+  final int typeId = 0;
 
   @override
-  WineBottle read(BinaryReader reader) {
+  WineCard read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return WineBottle(
+    return WineCard(
       id: fields[0] as String,
-      barcode: fields[1] as String,
-      cardId: fields[2] as String,
-      isActive: fields[3] as bool,
-      createdAt: fields[4] as DateTime?,
-      notes: fields[5] as String?,
+      name: fields[1] as String,
+      volume: fields[6] as double,
+      year: fields[2] as int?,
+      country: fields[3] as String?,
+      color: fields[4] as String?,
+      isSparkling: fields[5] as bool,
+      createdAt: fields[7] as DateTime?,
     );
   }
 
   @override
-  void write(BinaryWriter writer, WineBottle obj) {
+  void write(BinaryWriter writer, WineCard obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.barcode)
+      ..write(obj.name)
       ..writeByte(2)
-      ..write(obj.cardId)
+      ..write(obj.year)
       ..writeByte(3)
-      ..write(obj.isActive)
+      ..write(obj.country)
       ..writeByte(4)
-      ..write(obj.createdAt)
+      ..write(obj.color)
       ..writeByte(5)
-      ..write(obj.notes);
+      ..write(obj.isSparkling)
+      ..writeByte(6)
+      ..write(obj.volume)
+      ..writeByte(7)
+      ..write(obj.createdAt);
   }
 
   @override
@@ -50,7 +56,7 @@ class WineBottleAdapter extends TypeAdapter<WineBottle> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is WineBottleAdapter &&
+      other is WineCardAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
