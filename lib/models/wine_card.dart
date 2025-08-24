@@ -54,14 +54,14 @@ class WineCard {
     6.000, // Imperial
   ];
 
-  static const Map<double, String> volumeNames = {
-    0.187: 'Piccolo (187 мл)',
-    0.375: 'Demi (375 мл)', 
-    0.750: 'Стандарт (750 мл)',
-    1.500: 'Magnum (1,5 л)',
-    3.000: 'Double Magnum (3 л)',
-    6.000: 'Imperial (6 л)',
-  };
+  static Map<double, String> volumeNames = {
+  0.187: 'Piccolo (187 мл)',
+  0.375: 'Demi (375 мл)',
+  0.750: 'Classic (750 мл)',
+  1.500: 'Magnum (1.5 л)',        // точка вместо запятой
+  3.000: 'Double Magnum (3.0 л)', // точка вместо запятой
+  6.000: 'Imperial (6.0 л)',      // точка вместо запятой
+};
 
   // Красивое отображение объема с 3 знаками после запятой
   String get displayVolume {
@@ -70,10 +70,14 @@ class WineCard {
 
   // Получить количество активных бутылок (будет вычисляться из базы)
   int getActiveBottlesCount() {
-    final bottlesBox = Hive.box<WineBottle>('wine_bottles');
-    return bottlesBox.values
-        .where((bottle) => bottle.cardId == id && bottle.isActive)
-        .length;
+    try {
+      final bottlesBox = Hive.box('wine_bottles');
+      return bottlesBox.values
+          .where((bottle) => bottle.cardId == id && bottle.isActive)
+          .length;
+    } catch (e) {
+      return 0; // Если бокс не открыт, возвращаем 0
+    }
   }
 
   // Получить общий объем всех активных бутылок
@@ -90,12 +94,12 @@ class WineCard {
   // Краткая информация для отображения в списках
   String get subtitle {
     final parts = <String>[];
-    
+
     if (country != null) parts.add(country!);
     if (year != null) parts.add(year.toString());
     parts.add(displayVolume);
     if (isSparkling) parts.add('Игристое');
-    
+
     return parts.join(' • ');
   }
 }

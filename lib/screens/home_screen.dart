@@ -113,8 +113,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return cardsBox.values.where((card) {
       return card.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
           (card.country?.toLowerCase().contains(searchQuery.toLowerCase()) ??
-              false) ||
-          (card.producer?.toLowerCase().contains(searchQuery.toLowerCase()) ??
               false);
     }).toList();
   }
@@ -130,7 +128,6 @@ class _HomeScreenState extends State<HomeScreen> {
         year: 2018,
         country: 'Франция',
         color: 'Красное',
-        producer: 'Château Margaux',
         isSparkling: false,
       ),
       WineCard(
@@ -140,7 +137,6 @@ class _HomeScreenState extends State<HomeScreen> {
         year: 2012,
         country: 'Франция',
         color: 'Белое',
-        producer: 'Moët & Chandon',
         isSparkling: true,
       ),
       WineCard(
@@ -150,7 +146,6 @@ class _HomeScreenState extends State<HomeScreen> {
         year: 2016,
         country: 'Италия',
         color: 'Красное',
-        producer: 'Giuseppe Rinaldi',
         isSparkling: false,
       ),
     ];
