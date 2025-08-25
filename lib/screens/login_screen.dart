@@ -58,24 +58,26 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 120, // увеличил размер под ваш логотип
-                height: 120,
+                width: 480, // Увеличено в 4 раза
+                height: 480, // Увеличено в 4 раза
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface, // фон Ivory
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius:
+                      BorderRadius.circular(96), // Пропорционально увеличено
                   boxShadow: [
                     BoxShadow(
                       color: Theme.of(context)
                           .colorScheme
                           .primary
                           .withOpacity(0.2), // более мягкая тень
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
+                      blurRadius: 64, // Пропорционально увеличено
+                      offset: const Offset(0, 32), // Пропорционально увеличено
                     ),
                   ],
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(16), // отступы для логотипа
+                  padding:
+                      const EdgeInsets.all(64), // Пропорционально увеличено
                   child: Image.asset(
                     'assets/images/logo.png', // путь к вашему логотипу
                     fit: BoxFit.contain,

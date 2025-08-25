@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:winekeeper/models/wine_card.dart';
 import 'package:winekeeper/models/wine_bottle.dart';
 import 'dart:math';
+import 'package:winekeeper/core/app_theme.dart';
 
 class BarcodeScannerScreen extends StatefulWidget {
   final WineCard wineCard;
@@ -69,7 +70,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
     if (existingBottle.id.isNotEmpty) {
       _showMessage(
         'Ошибка: Бутылка с таким штрихкодом уже существует',
-        Colors.red,
+        AppTheme.error,
       );
       _resumeScanning();
       return;
@@ -86,7 +87,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
 
     _showMessage(
       'Бутылка добавлена! Штрихкод: $barcode',
-      Colors.green,
+      AppTheme.success,
     );
 
     _resumeScanning();
@@ -102,7 +103,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
     if (bottle.id.isEmpty) {
       _showMessage(
         'Бутылка не найдена или уже продана',
-        Colors.red,
+        AppTheme.error,
       );
       _resumeScanning();
       return;
@@ -116,7 +117,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
 
     _showMessage(
       'Бутылка продана! Штрихкод: $barcode',
-      Colors.green,
+      AppTheme.success,
     );
 
     _resumeScanning();

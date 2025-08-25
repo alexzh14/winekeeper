@@ -79,7 +79,7 @@ class _WineCardDetailScreenState extends State<WineCardDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Бутылка ${bottle.barcode} продана'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppTheme.success,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -209,14 +209,18 @@ class _WineCardDetailScreenState extends State<WineCardDetailScreen> {
                                   style: TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.green.shade700,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface, // Dark Chocolate
                                   ),
                                 ),
                                 Text(
                                   'В наличии',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.green.shade600,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface, // Dark Chocolate
                                   ),
                                 ),
                               ],
@@ -228,9 +232,12 @@ class _WineCardDetailScreenState extends State<WineCardDetailScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
+                              color: _getWineColor(wineCard!.color)
+                                  .withOpacity(0.1), // Цвет вина
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.blue.shade200),
+                              border: Border.all(
+                                  color: _getWineColor(wineCard!.color)
+                                      .withOpacity(0.3)),
                             ),
                             child: Column(
                               children: [
@@ -239,14 +246,18 @@ class _WineCardDetailScreenState extends State<WineCardDetailScreen> {
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.blue.shade700,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface, // Dark Chocolate
                                   ),
                                 ),
                                 Text(
                                   'Общий объем',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.blue.shade600,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface, // Dark Chocolate
                                   ),
                                 ),
                               ],
@@ -269,14 +280,14 @@ class _WineCardDetailScreenState extends State<WineCardDetailScreen> {
                                   style: TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.grey.shade600,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                                 Text(
                                   'Продано',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.grey.shade600,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                               ],

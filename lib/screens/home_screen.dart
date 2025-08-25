@@ -180,8 +180,27 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FC),
       appBar: AppBar(
-        title: const Text("Винотека",
-            style: TextStyle(fontWeight: FontWeight.w600)),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Image.asset(
+                'assets/images/logo.png',
+                fit: BoxFit.contain,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              "Винотека",
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
         backgroundColor: Theme.of(context).colorScheme.surface, // Ivory
         foregroundColor:
             Theme.of(context).colorScheme.onSurface, // Dark Chocolate
@@ -466,7 +485,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                             'Общий объем: ${totalVolume.toStringAsFixed(3)} л',
                                             style: TextStyle(
                                               fontSize: 13,
-                                              color: Colors.blue.shade700,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface,
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
@@ -480,9 +501,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                           horizontal: 12, vertical: 8),
                                       decoration: BoxDecoration(
                                         color: activeBottlesCount > 0
-                                            ? Colors.green.shade100
+                                            ? AppTheme.success.withOpacity(
+                                                0.1) // Системный зеленый с прозрачностью
                                             : Colors.grey.shade100,
                                         borderRadius: BorderRadius.circular(12),
+                                        border: activeBottlesCount > 0
+                                            ? Border.all(
+                                                color: AppTheme.success
+                                                    .withOpacity(0.3))
+                                            : null,
                                       ),
                                       child: Column(
                                         mainAxisSize: MainAxisSize.min,
@@ -493,7 +520,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                               fontSize: 20,
                                               fontWeight: FontWeight.bold,
                                               color: activeBottlesCount > 0
-                                                  ? Colors.green.shade700
+                                                  ? Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface // Системный цвет шрифта (Dark Chocolate)
                                                   : Colors.grey.shade600,
                                             ),
                                           ),
@@ -502,7 +531,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: activeBottlesCount > 0
-                                                  ? Colors.green.shade600
+                                                  ? Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface // Системный цвет шрифта (Dark Chocolate)
                                                   : Colors.grey.shade600,
                                               fontWeight: FontWeight.w500,
                                             ),

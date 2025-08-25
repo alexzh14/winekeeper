@@ -23,6 +23,8 @@ class _AddWineScreenState extends State<AddWineScreen> {
   bool _isSparkling = false;
   double? _selectedVolume;
   bool _useCustomVolume = false;
+  bool _useCustomCountry = false;
+  final _customCountryController = TextEditingController();
 
   late Box<WineCard> cardsBox;
 
@@ -34,16 +36,13 @@ class _AddWineScreenState extends State<AddWineScreen> {
     'Португалия',
     'Австрия',
     'Грузия',
-    'Молдова',
-    'Россия',
     'США',
     'Чили',
     'Аргентина',
     'Австралия',
     'ЮАР',
     'Новая Зеландия',
-    'Канада',
-    'Южная Африка',
+    'Другое',
   ];
 
   final Map<String, Color> _wineColors = {
@@ -65,6 +64,7 @@ class _AddWineScreenState extends State<AddWineScreen> {
     _nameController.dispose();
     _yearController.dispose();
     _customVolumeController.dispose();
+    _customCountryController.dispose(); // ДОБАВИТЬ ЭТУ СТРОКУ
     super.dispose();
   }
 
@@ -86,7 +86,9 @@ class _AddWineScreenState extends State<AddWineScreen> {
       id: WineCard.generateId(),
       name: _nameController.text.trim(),
       volume: finalVolume,
-      country: _selectedCountry,
+      country: _useCustomCountry
+          ? _customCountryController.text.trim()
+          : _selectedCountry,
       year: _yearController.text.isNotEmpty
           ? int.parse(_yearController.text)
           : null,
@@ -351,26 +353,66 @@ class _AddWineScreenState extends State<AddWineScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        DropdownButtonFormField<String>(
-                          value: _selectedCountry,
-                          decoration: const InputDecoration(
-                            hintText: "Выберите",
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 14),
+                        if (!_useCustomCountry) ...[
+                          DropdownButtonFormField<String>(
+                            value: _selectedCountry,
+                            decoration: const InputDecoration(
+                              hintText: "Выберите",
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 14),
+                            ),
+                            items: _countries.map((country) {
+                              return DropdownMenuItem(
+                                value: country,
+                                child: Text(country),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                if (value == 'Другое') {
+                                  _useCustomCountry = true;
+                                  _selectedCountry = null;
+                                } else {
+                                  _selectedCountry = value;
+                                }
+                              });
+                            },
                           ),
-                          items: _countries.map((country) {
-                            return DropdownMenuItem(
-                              value: country,
-                              child: Text(country),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedCountry = value;
-                            });
-                          },
-                        ),
+                        ] else ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _customCountryController,
+                                  decoration: const InputDecoration(
+                                    hintText: "Введите страну",
+                                    border: OutlineInputBorder(),
+                                    contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 14),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Укажите страну';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _useCustomCountry = false;
+                                    _selectedCountry = null;
+                                    _customCountryController.clear();
+                                  });
+                                },
+                                child: const Text('Отмена'),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
