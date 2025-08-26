@@ -841,20 +841,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AddWineScreen()),
-          );
-        },
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          "Создать карточку",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-        ),
-      ),
     );
   }
 

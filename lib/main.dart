@@ -7,6 +7,7 @@ import 'package:winekeeper/models/wine_card.dart';
 import 'package:winekeeper/models/wine_bottle.dart';
 import 'package:winekeeper/models/sale_record.dart';
 import 'package:winekeeper/core/app_theme.dart';
+import 'package:winekeeper/widgets/main_navigation.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -67,7 +68,7 @@ class WineKeeperApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'WineKeeper',
       theme: AppTheme.light(),
-      home: isLoggedIn ? const HomeScreen() : const LoginScreen(),
+      home: isLoggedIn ? const MainNavigation() : const LoginScreen(),
     );
   }
 }
