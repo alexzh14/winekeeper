@@ -35,92 +35,93 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   Widget _buildBottomNavigation() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFFAF5EF), // Ivory
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: SizedBox(
-          height: 80,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Основная панель навигации (без центральной кнопки)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildNavItem(0, Icons.add_circle_outline, Icons.add_circle, 'Создать'),
-                  _buildNavItem(1, Icons.attach_money_outlined, Icons.attach_money, 'Продать'),
-                  const SizedBox(width: 70), // Пространство для центральной кнопки
-                  _buildNavItem(3, Icons.inventory_2_outlined, Icons.inventory_2, 'Ревизия'),
-                  _buildNavItem(4, Icons.analytics_outlined, Icons.analytics, 'Отчеты'),
-                ],
-              ),
-              
-              // Выпуклая кнопка Винотека по центру
-              Positioned(
-                bottom: 10,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    GestureDetector(
-                      onTap: () => _onDestinationSelected(2),
-                      child: Container(
-                        width: 70,
-                        height: 70,
-                        decoration: BoxDecoration(
-                          color: _currentIndex == 2 
-                              ? const Color(0xFFFF857A) 
-                              : const Color(0xFFFAF5EF),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: const Color(0xFFFF857A),
-                            width: 3,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFFF857A).withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.wine_bar,
-                          size: 32,
-                          color: _currentIndex == 2 
-                              ? Colors.white 
-                              : const Color(0xFFFF857A),
-                        ),
-                      ),
+  return Container(
+    decoration: BoxDecoration(
+      color: const Color(0xFFFAF5EF), // Ivory
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.08),
+          blurRadius: 10,
+          offset: const Offset(0, -2),
+        ),
+      ],
+    ),
+    child: SafeArea(
+      child: SizedBox(
+        height: 80,
+        child: Stack(
+          clipBehavior: Clip.none, // Позволяет выходить за границы
+          alignment: Alignment.center,
+          children: [
+            // Основная панель навигации (без центральной кнопки)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildNavItem(0, Icons.add_circle_outline, Icons.add_circle, 'Создать'),
+                _buildNavItem(1, Icons.attach_money_outlined, Icons.attach_money, 'Продать'),
+                const SizedBox(width: 70), // Пространство для центральной кнопки
+                _buildNavItem(3, Icons.inventory_2_outlined, Icons.inventory_2, 'Ревизия'),
+                _buildNavItem(4, Icons.analytics_outlined, Icons.analytics, 'Отчеты'),
+              ],
+            ),
+            
+            // Выпуклая кнопка Винотека - выходит за границы панели
+            Positioned(
+              top: -15, // Поднимаем кнопку выше панели
+              child: GestureDetector(
+                onTap: () => _onDestinationSelected(2),
+                child: Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    color: _currentIndex == 2 
+                        ? const Color(0xFFFF857A) 
+                        : const Color(0xFFFAF5EF),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFFFF857A),
+                      width: 3,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Винотека',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: _currentIndex == 2 ? FontWeight.bold : FontWeight.normal,
-                        color: _currentIndex == 2 
-                            ? const Color(0xFFFF857A)
-                            : const Color(0xFF362C2A).withOpacity(0.7),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFF857A).withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                        spreadRadius: 2,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.wine_bar,
+                    size: 32,
+                    color: _currentIndex == 2 
+                        ? Colors.white 
+                        : const Color(0xFFFF857A),
+                  ),
                 ),
               ),
-            ],
-          ),
+            ),
+            
+            // Текст "Винотека" на уровне других надписей
+            Positioned(
+              bottom: 8, // На том же уровне, что и другие надписи
+              child: Text(
+                'Винотека',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: _currentIndex == 2 ? FontWeight.bold : FontWeight.normal,
+                  color: _currentIndex == 2 
+                      ? const Color(0xFFFF857A)
+                      : const Color(0xFF362C2A).withOpacity(0.7),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildNavItem(int index, IconData icon, IconData selectedIcon, String label) {
     final bool isSelected = _currentIndex == index;

@@ -68,7 +68,12 @@ class WineKeeperApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'WineKeeper',
       theme: AppTheme.light(),
+      // Убираем прямую навигацию к HomeScreen - всегда через MainNavigation
       home: isLoggedIn ? const MainNavigation() : const LoginScreen(),
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/main': (context) => const MainNavigation(),
+      },
     );
   }
 }

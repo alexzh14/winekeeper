@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:winekeeper/screens/home_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:winekeeper/core/app_theme.dart';
+import 'package:winekeeper/widgets/main_navigation.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,37 +16,37 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
 
   void _login() async {
-    String email = _emailController.text.trim();
-    String password = _passwordController.text.trim();
+  String email = _emailController.text.trim();
+  String password = _passwordController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Введите email и пароль")),
-      );
-      return;
-    }
-
-    // фиксированные значения для входа
-    const validEmail = "admin@winekeeper.com";
-    const validPassword = "1234567";
-
-    if (email == validEmail && password == validPassword) {
-      // сохраняем статус входа
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', true);
-
-      // переход на HomeScreen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
-    } else {
-      // если данные не совпали — ошибка
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Неверный email или пароль")),
-      );
-    }
+  if (email.isEmpty || password.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Введите email и пароль")),
+    );
+    return;
   }
+
+  // фиксированные значения для входа
+  const validEmail = "admin@winekeeper.com";
+  const validPassword = "1234567";
+
+  if (email == validEmail && password == validPassword) {
+    // сохраняем статус входа
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', true);
+
+    // ИСПРАВЛЕНИЕ - переход на MainNavigation, а не HomeScreen
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const MainNavigation()),
+    );
+  } else {
+    // если данные не совпали — ошибка
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Неверный email или пароль")),
+    );
+  }
+}
 
   @override
   Widget build(BuildContext context) {

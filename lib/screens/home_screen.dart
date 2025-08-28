@@ -58,14 +58,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _logout(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isLoggedIn', false);
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool('isLoggedIn', false);
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-    );
-  }
+  // Используем pushNamedAndRemoveUntil для полной перезагрузки
+  Navigator.pushNamedAndRemoveUntil(
+    context, 
+    '/login',
+    (route) => false,
+  );
+}
 
   Future<void> _deleteCard(WineCard card) async {
     final confirmed = await showDialog<bool>(
