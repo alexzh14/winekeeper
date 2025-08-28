@@ -6,6 +6,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:winekeeper/models/wine_card.dart';
 import 'package:winekeeper/models/wine_bottle.dart';
 import 'package:winekeeper/models/sale_record.dart';
+import 'package:winekeeper/models/audit_session.dart';  // ДОБАВЛЕНО
 import 'package:winekeeper/core/app_theme.dart';
 import 'package:winekeeper/widgets/main_navigation.dart';
 
@@ -19,11 +20,13 @@ Future<void> main() async {
   Hive.registerAdapter(WineCardAdapter());     // typeId: 0
   Hive.registerAdapter(WineBottleAdapter());   // typeId: 1  
   Hive.registerAdapter(SaleRecordAdapter());   // typeId: 2
+  Hive.registerAdapter(AuditSessionAdapter()); // typeId: 3  // ДОБАВЛЕНО
 
   // Открываем боксы для хранения данных
   await Hive.openBox<WineCard>('wine_cards');
   await Hive.openBox<WineBottle>('wine_bottles');
   await Hive.openBox<SaleRecord>('sale_records');
+  await Hive.openBox<AuditSession>('audit_sessions');  // ДОБАВЛЕНО
 
   // Проверяем версию данных и очищаем при необходимости
   await _checkAndMigrateData();
@@ -37,7 +40,7 @@ Future<void> main() async {
 
 /// Проверка версии данных и миграция при необходимости
 Future<void> _checkAndMigrateData() async {
-  const currentDataVersion = 2; // Увеличиваем при изменении моделей
+  const currentDataVersion = 3; // Увеличили версию для новой модели
   
   final prefs = await SharedPreferences.getInstance();
   final storedVersion = prefs.getInt('data_version') ?? 0;
@@ -49,6 +52,7 @@ Future<void> _checkAndMigrateData() async {
     await Hive.box<WineCard>('wine_cards').clear();
     await Hive.box<WineBottle>('wine_bottles').clear();
     await Hive.box<SaleRecord>('sale_records').clear();
+    await Hive.box<AuditSession>('audit_sessions').clear();  // ДОБАВЛЕНО
     
     // Обновляем версию
     await prefs.setInt('data_version', currentDataVersion);

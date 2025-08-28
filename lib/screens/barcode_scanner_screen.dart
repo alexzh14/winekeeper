@@ -5,15 +5,18 @@ import 'package:winekeeper/core/app_theme.dart';
 import 'package:winekeeper/models/wine_card.dart';
 import 'package:winekeeper/models/wine_bottle.dart';
 import 'package:winekeeper/models/sale_record.dart';
+import 'package:winekeeper/models/audit_session.dart';
 
 class BarcodeScannerScreen extends StatefulWidget {
-  final String? mode; // 'add' или 'sell'
+  final String? mode; // 'add', 'sell', или 'audit'
   final WineCard? wineCard; // для режима добавления к конкретной карточке
+  final AuditSession? auditSession; // для режима ревизии
 
   const BarcodeScannerScreen({
     super.key,
     this.mode,
     this.wineCard,
+    this.auditSession,
   });
 
   @override
@@ -42,6 +45,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
         return 'Продать бутылку';
       case 'add':
         return 'Добавить бутылку';
+      case 'audit':
+        return 'Ревизия винотеки';
       default:
         return 'Сканировать штрихкод';
     }
@@ -53,6 +58,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
         return 'Наведите камеру на штрихкод\nбутылки для продажи';
       case 'add':
         return 'Наведите камеру на штрихкод\nновой бутылки';
+      case 'audit':
+        return 'Сканируйте все бутылки\nв винотеке для ревизии';
       default:
         return 'Наведите камеру на штрихкод';
     }
@@ -63,7 +70,22 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text(_screenTitle),
+        title: Column(
+          children: [
+            Text(_screenTitle),
+            if (widget.mode == 'audit' && widget.auditSession != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Прогресс: ${widget.auditSession!.totalScanned} из ${widget.auditSession!.totalExpected}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.normal,
+                  color: Colors.grey.shade600, // Заменили на конкретный цвет
+                ),
+              ),
+            ],
+          ],
+        ),
         backgroundColor: const Color(0xFFFAF5EF),
         foregroundColor: const Color(0xFF362C2A),
         elevation: 0,
@@ -76,6 +98,12 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
             icon: const Icon(Icons.flip_camera_ios),
             onPressed: () => cameraController.switchCamera(),
           ),
+          if (widget.mode == 'audit')
+            IconButton(
+              icon: const Icon(Icons.check_circle_outline),
+              onPressed: _completeAudit,
+              tooltip: 'Завершить ревизию',
+            ),
         ],
       ),
       body: Stack(
@@ -158,6 +186,17 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                       fontSize: 14,
                     ),
                   ),
+                  if (widget.mode == 'audit' && widget.auditSession != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '${widget.auditSession!.progressPercent.toStringAsFixed(1)}% завершено',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -206,15 +245,17 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
 
     String testBarcode;
     
-    if (widget.mode == 'sell') {
-      // Для продажи нужен штрихкод СУЩЕСТВУЮЩЕЙ бутылки
+    if (widget.mode == 'audit' || widget.mode == 'sell') {
+      // Для ревизии и продажи нужен штрихкод СУЩЕСТВУЮЩЕЙ бутылки
       final bottlesBox = Hive.box<WineBottle>('wine_bottles');
       final existingBottles = bottlesBox.values
           .where((bottle) => bottle.isActive)
           .toList();
       
       if (existingBottles.isEmpty) {
-        _showMessage('Нет активных бутылок для продажи');
+        _showMessage(widget.mode == 'audit' 
+          ? 'Нет активных бутылок для ревизии' 
+          : 'Нет активных бутылок для продажи');
         return;
       }
       
@@ -239,9 +280,67 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
       case 'add':
         _handleAddMode(barcode);
         break;
+      case 'audit':
+        _handleAuditMode(barcode);
+        break;
       default:
         _handleDefaultMode(barcode);
     }
+  }
+
+  void _handleAuditMode(String barcode) {
+    final auditBox = Hive.box<AuditSession>('audit_sessions');
+    final audit = widget.auditSession;
+
+    if (audit == null) {
+      _showMessage('Ошибка: сессия ревизии не найдена');
+      return;
+    }
+
+    // ✅ ПРОВЕРКА НА ДУБЛЬ
+    if (audit.isBottleScanned(barcode)) {
+      _showMessage('🔄 Эта бутылка уже отсканирована\nПропускаем...');
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          _resetScreen();
+        }
+      });
+      return;
+    }
+
+    // Добавляем штрихкод в список отсканированных
+    audit.addScannedBarcode(barcode);
+
+    // Ищем бутылку в базе
+    final bottlesBox = Hive.box<WineBottle>('wine_bottles');
+    final bottle = bottlesBox.values
+        .where((b) => b.barcode == barcode && b.isActive)
+        .firstOrNull;
+
+    if (bottle != null) {
+      // Известная бутылка - добавляем к найденным
+      audit.addFoundBottle(bottle.cardId, barcode);
+      
+      // Получаем название карточки для отображения
+      final cardsBox = Hive.box<WineCard>('wine_cards');
+      final card = cardsBox.get(bottle.cardId);
+      final cardName = card?.name ?? 'Неизвестная карточка';
+      
+      _showMessage('✅ Найдена бутылка\n$cardName\n\nПрогресс: ${audit.totalScanned} из ${audit.totalExpected}');
+    } else {
+      // Неизвестная бутылка
+      _showMessage('❓ Неизвестная бутылка\nШтрихкод: $barcode\n\nВозможно, не из вашей винотеки');
+    }
+
+    // Сохраняем обновленную сессию
+    auditBox.put(audit.id, audit);
+
+    // Возвращаемся к сканированию через 3 секунды
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        _resetScreen();
+      }
+    });
   }
 
   void _handleSellMode(String barcode) {
@@ -298,8 +397,71 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   }
 
   void _handleDefaultMode(String barcode) {
-    // Общий режим - показываем информацию о штрихкоде
     _showBarcodeInfo(barcode);
+  }
+
+  void _completeAudit() async {
+    final audit = widget.auditSession;
+    if (audit == null) return;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFFFAF5EF),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Завершить ревизию?',
+          style: TextStyle(color: Color(0xFF362C2A)),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Отсканировано: ${audit.totalScanned} из ${audit.totalExpected} бутылок',
+              style: const TextStyle(color: Color(0xFF362C2A)),
+            ),
+            Text(
+              'Прогресс: ${audit.progressPercent.toStringAsFixed(1)}%',
+              style: const TextStyle(color: Color(0xFF362C2A)),
+            ),
+            if (audit.unknownBottlesCount > 0) ...[
+              const SizedBox(height: 8),
+              Text(
+                '⚠️ Найдено ${audit.unknownBottlesCount} неизвестных бутылок',
+                style: const TextStyle(color: Colors.orange),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Продолжить'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF857A), // Используем прямой цвет
+            ),
+            child: const Text('Завершить', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      // Завершаем ревизию
+      audit.complete();
+      final auditBox = Hive.box<AuditSession>('audit_sessions');
+      await auditBox.put(audit.id, audit);
+
+      if (mounted) {
+        // Возвращаемся к списку ревизий
+        Navigator.pop(context);
+        _showMessage('✅ Ревизия завершена!\nРезультаты сохранены');
+      }
+    }
   }
 
   void _showSellConfirmation(WineBottle bottle, WineCard wineCard) {
@@ -309,23 +471,44 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
         backgroundColor: const Color(0xFFFAF5EF),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
-          'Подтвердить продажу',
+          'Подтверждение продажи',
           style: TextStyle(color: Color(0xFF362C2A)),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Вино: ${wineCard.name}'),
-            if (wineCard.year != null) Text('Год: ${wineCard.year}'),
-            if (wineCard.country != null) Text('Страна: ${wineCard.country}'),
-            Text('Объем: ${wineCard.displayVolume}'),
+            const Icon(
+              Icons.wine_bar,
+              size: 64,
+              color: Color(0xFFFF857A),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              wineCard.name,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF362C2A),
+              ),
+            ),
             const SizedBox(height: 8),
             Text(
-              'Штрихкод: ${bottle.barcode}',
-              style: const TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 12,
+              wineCard.subtitle,
+              style: const TextStyle(color: Color(0xFF362C2A)),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF857A).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Штрихкод: ${bottle.barcode}',
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  color: Color(0xFF362C2A),
+                ),
               ),
             ),
           ],
@@ -340,8 +523,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              _confirmSale(bottle, wineCard);
               Navigator.pop(context);
+              _confirmSale(bottle, wineCard);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFF857A),
@@ -354,56 +537,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
         ],
       ),
     );
-  }
-
-  void _confirmSale(WineBottle bottle, WineCard wineCard) {
-    final bottlesBox = Hive.box<WineBottle>('wine_bottles');
-    
-    // Деактивируем бутылку
-    bottle.isActive = false;
-    bottlesBox.put(bottle.id, bottle); // Сохраняем изменения
-
-    // Создаем запись о продаже
-    final saleRecord = SaleRecord(
-      id: SaleRecord.generateId(),
-      bottleId: bottle.id,
-      cardId: wineCard.id,
-      sellerId: 'current_user', // TODO: заменить на реального пользователя
-      reason: SaleRecord.REASON_SALE,
-      method: SaleRecord.METHOD_SCAN,
-    );
-
-    final salesBox = Hive.box<SaleRecord>('sale_records');
-    salesBox.put(saleRecord.id, saleRecord);
-
-    _showMessage('Бутылка успешно продана!\n${wineCard.name}');
-    
-    // Возвращаемся назад
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        Navigator.pop(context);
-      }
-    });
-  }
-
-  void _addBottleToCard(String barcode, WineCard wineCard) {
-    final bottle = WineBottle(
-      id: WineBottle.generateId(),
-      barcode: barcode,
-      cardId: wineCard.id,
-    );
-
-    final bottlesBox = Hive.box<WineBottle>('wine_bottles');
-    bottlesBox.put(bottle.id, bottle);
-
-    _showMessage('Бутылка успешно добавлена!\n${wineCard.name}');
-    
-    // Возвращаемся назад
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        Navigator.pop(context);
-      }
-    });
   }
 
   void _showCardSelectionDialog(String barcode) {
@@ -505,6 +638,56 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
     );
   }
 
+  void _confirmSale(WineBottle bottle, WineCard wineCard) {
+    final bottlesBox = Hive.box<WineBottle>('wine_bottles');
+    
+    // Деактивируем бутылку
+    bottle.isActive = false;
+    bottlesBox.put(bottle.id, bottle);
+
+    // Создаем запись о продаже
+    final saleRecord = SaleRecord(
+      id: SaleRecord.generateId(),
+      bottleId: bottle.id,
+      cardId: wineCard.id,
+      sellerId: 'current_user',
+      reason: SaleRecord.REASON_SALE,
+      method: SaleRecord.METHOD_SCAN,
+    );
+
+    final salesBox = Hive.box<SaleRecord>('sale_records');
+    salesBox.put(saleRecord.id, saleRecord);
+
+    _showMessage('Бутылка успешно продана!\n${wineCard.name}');
+    
+    // Возвращаемся назад
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    });
+  }
+
+  void _addBottleToCard(String barcode, WineCard wineCard) {
+    final bottle = WineBottle(
+      id: WineBottle.generateId(),
+      barcode: barcode,
+      cardId: wineCard.id,
+    );
+
+    final bottlesBox = Hive.box<WineBottle>('wine_bottles');
+    bottlesBox.put(bottle.id, bottle);
+
+    _showMessage('Бутылка успешно добавлена!\n${wineCard.name}');
+    
+    // Возвращаемся назад
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    });
+  }
+
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -576,109 +759,92 @@ class QrScannerOverlayShape extends ShapeBorder {
 
   @override
   void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) {
-    final width = rect.width;
-    final height = rect.height;
-    final cutOutOffset = (width - cutOutSize) / 2;
-    final cutOutRect = Rect.fromLTWH(
-      cutOutOffset,
-      height / 2 - cutOutSize / 2,
-      cutOutSize,
-      cutOutSize,
-    );
-
-    final backgroundPaint = Paint()
+    final Paint paint = Paint()
       ..color = overlayColor
       ..style = PaintingStyle.fill;
 
-    final borderPaint = Paint()
-      ..color = borderColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = borderWidth;
-
-    // Рисуем затемненный фон
     canvas.drawPath(
       Path.combine(
         PathOperation.difference,
         Path()..addRect(rect),
-        Path()
-          ..addRRect(RRect.fromRectAndRadius(
-            cutOutRect,
-            Radius.circular(borderRadius),
-          )),
+        getOuterPath(rect),
       ),
-      backgroundPaint,
+      paint,
+    );
+
+    // Рисуем рамку
+    final Paint borderPaint = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = borderWidth;
+
+    final double cutOutOffset = (rect.width - cutOutSize) / 2;
+    final Rect cutOutRect = Rect.fromLTWH(
+      cutOutOffset,
+      rect.height / 2 - cutOutSize / 2,
+      cutOutSize,
+      cutOutSize,
     );
 
     // Рисуем углы рамки
-    final borderRect = RRect.fromRectAndRadius(
-      cutOutRect,
-      Radius.circular(borderRadius),
-    );
+    final double cornerSize = borderLength;
     
-    _drawCornerBorder(canvas, borderRect, borderPaint);
-  }
-
-  void _drawCornerBorder(Canvas canvas, RRect rect, Paint paint) {
     // Верхний левый угол
-    canvas.drawPath(
-      Path()
-        ..moveTo(rect.left, rect.top + borderLength)
-        ..lineTo(rect.left, rect.top + borderRadius)
-        ..arcToPoint(
-          Offset(rect.left + borderRadius, rect.top),
-          radius: Radius.circular(borderRadius),
-        )
-        ..lineTo(rect.left + borderLength, rect.top),
-      paint,
+    canvas.drawLine(
+      Offset(cutOutRect.left, cutOutRect.top + cornerSize),
+      Offset(cutOutRect.left, cutOutRect.top),
+      borderPaint,
+    );
+    canvas.drawLine(
+      Offset(cutOutRect.left, cutOutRect.top),
+      Offset(cutOutRect.left + cornerSize, cutOutRect.top),
+      borderPaint,
     );
 
     // Верхний правый угол
-    canvas.drawPath(
-      Path()
-        ..moveTo(rect.right - borderLength, rect.top)
-        ..lineTo(rect.right - borderRadius, rect.top)
-        ..arcToPoint(
-          Offset(rect.right, rect.top + borderRadius),
-          radius: Radius.circular(borderRadius),
-        )
-        ..lineTo(rect.right, rect.top + borderLength),
-      paint,
+    canvas.drawLine(
+      Offset(cutOutRect.right - cornerSize, cutOutRect.top),
+      Offset(cutOutRect.right, cutOutRect.top),
+      borderPaint,
     );
-
-    // Нижний правый угол
-    canvas.drawPath(
-      Path()
-        ..moveTo(rect.right, rect.bottom - borderLength)
-        ..lineTo(rect.right, rect.bottom - borderRadius)
-        ..arcToPoint(
-          Offset(rect.right - borderRadius, rect.bottom),
-          radius: Radius.circular(borderRadius),
-        )
-        ..lineTo(rect.right - borderLength, rect.bottom),
-      paint,
+    canvas.drawLine(
+      Offset(cutOutRect.right, cutOutRect.top),
+      Offset(cutOutRect.right, cutOutRect.top + cornerSize),
+      borderPaint,
     );
 
     // Нижний левый угол
-    canvas.drawPath(
-      Path()
-        ..moveTo(rect.left + borderLength, rect.bottom)
-        ..lineTo(rect.left + borderRadius, rect.bottom)
-        ..arcToPoint(
-          Offset(rect.left, rect.bottom - borderRadius),
-          radius: Radius.circular(borderRadius),
-        )
-        ..lineTo(rect.left, rect.bottom - borderLength),
-      paint,
+    canvas.drawLine(
+      Offset(cutOutRect.left, cutOutRect.bottom - cornerSize),
+      Offset(cutOutRect.left, cutOutRect.bottom),
+      borderPaint,
+    );
+    canvas.drawLine(
+      Offset(cutOutRect.left, cutOutRect.bottom),
+      Offset(cutOutRect.left + cornerSize, cutOutRect.bottom),
+      borderPaint,
+    );
+
+    // Нижний правый угол
+    canvas.drawLine(
+      Offset(cutOutRect.right - cornerSize, cutOutRect.bottom),
+      Offset(cutOutRect.right, cutOutRect.bottom),
+      borderPaint,
+    );
+    canvas.drawLine(
+      Offset(cutOutRect.right, cutOutRect.bottom - cornerSize),
+      Offset(cutOutRect.right, cutOutRect.bottom),
+      borderPaint,
     );
   }
 
   @override
   ShapeBorder scale(double t) => QrScannerOverlayShape(
-        borderColor: borderColor,
-        borderWidth: borderWidth * t,
-        overlayColor: overlayColor,
-        borderRadius: borderRadius * t,
-        borderLength: borderLength * t,
-        cutOutSize: cutOutSize * t,
-      );
+    borderColor: borderColor,
+    borderWidth: borderWidth * t,
+    overlayColor: overlayColor,
+    borderRadius: borderRadius * t,
+    borderLength: borderLength * t,
+    cutOutSize: cutOutSize * t,
+  );
 }

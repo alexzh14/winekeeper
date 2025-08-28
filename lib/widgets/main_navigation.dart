@@ -3,6 +3,7 @@ import 'package:winekeeper/core/app_theme.dart';
 import 'package:winekeeper/screens/home_screen.dart';
 import 'package:winekeeper/screens/add_wine_screen.dart';
 import 'package:winekeeper/screens/barcode_scanner_screen.dart';
+import 'package:winekeeper/screens/audit_list_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -19,7 +20,7 @@ class _MainNavigationState extends State<MainNavigation> {
     const PlaceholderScreen(title: 'Создать', icon: Icons.add_circle),
     const PlaceholderScreen(title: 'Продать', icon: Icons.attach_money),
     const HomeScreen(), // Винотека
-    const PlaceholderScreen(title: 'Ревизия', icon: Icons.inventory_2),
+    const AuditListScreen(),
     const PlaceholderScreen(title: 'Отчеты', icon: Icons.analytics),
   ];
 
