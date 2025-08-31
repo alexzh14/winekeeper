@@ -31,6 +31,12 @@ class AuditSession {
   @HiveField(8)
   String? notes; // Заметки к ревизии
 
+  @HiveField(9)
+  Map<String, List<String>> soldBottlesDuringAudit; // cardId -> [проданные штрихкоды во время ревизии]
+
+  @HiveField(10)
+  DateTime? lastSyncTime; // когда последний раз синхронизировались
+
   // Константы статусов
   static const String STATUS_ACTIVE = 'active';
   static const String STATUS_COMPLETED = 'completed'; 
@@ -46,10 +52,13 @@ class AuditSession {
     List<String>? scannedBarcodes,
     Map<String, List<String>>? foundBottles,
     this.notes,
+    Map<String, List<String>>? soldBottlesDuringAudit,
+    this.lastSyncTime,
   })  : expectedBottles = expectedBottles ?? {},
         expectedBarcodes = expectedBarcodes ?? {},
         scannedBarcodes = scannedBarcodes ?? <String>[],
-        foundBottles = foundBottles ?? {};
+        foundBottles = foundBottles ?? {},
+        soldBottlesDuringAudit = soldBottlesDuringAudit ?? {};
 
   // Генерация уникального ID для новой ревизии
   static String generateId() {
@@ -104,6 +113,30 @@ class AuditSession {
     }
   }
 
+  /// Количество бутылок, проданных во время ревизии
+  int get soldBottlesCount {
+    return soldBottlesDuringAudit.values
+        .fold(0, (sum, barcodes) => sum + barcodes.length);
+  }
+
+  /// Нужна ли синхронизация (прошло больше минуты с последней)
+  bool get needsSync {
+    if (!isActive) return false;
+    if (lastSyncTime == null) return true;
+    
+    final now = DateTime.now();
+    final timeSinceSync = now.difference(lastSyncTime!);
+    return timeSinceSync.inMinutes >= 1; // Синхронизируем если прошла минута
+  }
+
+  /// Краткая информация о проданных бутылках для отображения
+  String get soldBottlesSummary {
+    if (soldBottlesCount == 0) return '';
+    return 'Продано во время ревизии: $soldBottlesCount бут.';
+  }
+
+  // МЕТОДЫ УПРАВЛЕНИЯ РЕВИЗИЕЙ
+
   /// Проверка, была ли уже отсканирована бутылка
   bool isBottleScanned(String barcode) {
     return scannedBarcodes.contains(barcode);
@@ -140,6 +173,8 @@ class AuditSession {
     status = STATUS_ACTIVE;
   }
 
+  // МЕТОДЫ АНАЛИЗА РАСХОЖДЕНИЙ
+
   /// Расчет расхождений для конкретной карточки
   int getDiscrepancy(String cardId) {
     final expected = expectedBottles[cardId] ?? 0;
@@ -167,12 +202,226 @@ class AuditSession {
   /// Общее количество карточек с расхождениями
   int get discrepanciesCount => getDiscrepancies().length;
 
+  // СИНХРОНИЗАЦИЯ С ТЕКУЩИМ СОСТОЯНИЕМ ВИНОТЕКИ
+
+  /// Синхронизация с текущим состоянием винотеки
+  /// Возвращает информацию об изменениях для уведомления пользователя
+  Map<String, dynamic> syncWithCurrentState(Box bottlesBox, Box cardsBox) {
+    if (!isActive) return {'hasChanges': false}; // Не синхронизируем завершенные ревизии
+    
+    final changes = <String, dynamic>{
+      'hasChanges': false,
+      'soldBottles': <String, String>{}, // barcode -> cardName
+      'removedFromExpected': 0,
+      'removedFromScanned': 0,
+    };
+    
+    final now = DateTime.now();
+    final newSoldBottles = <String, List<String>>{};
+    int totalRemovedExpected = 0;
+    int totalRemovedScanned = 0;
+    
+    // Проходим по всем ожидаемым бутылкам
+    for (final cardId in expectedBarcodes.keys.toList()) {
+      final expectedForCard = expectedBarcodes[cardId] ?? [];
+      final soldForCard = <String>[];
+      
+      for (final barcode in expectedForCard.toList()) {
+        // Проверяем, активна ли еще бутылка
+        final bottle = bottlesBox.values
+            .where((b) => b.barcode == barcode)
+            .firstOrNull;
+            
+        if (bottle == null || !bottle.isActive) {
+          // Бутылка продана или удалена
+          soldForCard.add(barcode);
+          
+          // Удаляем из ожидаемых
+          expectedBarcodes[cardId]?.remove(barcode);
+          totalRemovedExpected++;
+          
+          // Если была отсканирована - удаляем и оттуда
+          if (scannedBarcodes.contains(barcode)) {
+            scannedBarcodes.remove(barcode);
+            foundBottles[cardId]?.remove(barcode);
+            totalRemovedScanned++;
+          }
+          
+          // Добавляем в информацию об изменениях
+          final card = cardsBox.get(cardId);
+          final cardName = card?.name ?? 'Неизвестная карточка';
+          changes['soldBottles'][barcode] = cardName;
+          changes['hasChanges'] = true;
+        }
+      }
+      
+      if (soldForCard.isNotEmpty) {
+        newSoldBottles[cardId] = soldForCard;
+      }
+      
+      // Обновляем количество ожидаемых бутылок для карточки
+      final remainingCount = expectedBarcodes[cardId]?.length ?? 0;
+      if (remainingCount > 0) {
+        expectedBottles[cardId] = remainingCount;
+      } else {
+        // Если не осталось бутылок - удаляем карточку из ревизии
+        expectedBottles.remove(cardId);
+        expectedBarcodes.remove(cardId);
+        foundBottles.remove(cardId);
+      }
+    }
+    
+    // Обновляем информацию о проданных бутылках
+    if (newSoldBottles.isNotEmpty) {
+      for (final cardId in newSoldBottles.keys) {
+        soldBottlesDuringAudit[cardId] ??= <String>[];
+        soldBottlesDuringAudit[cardId]!.addAll(newSoldBottles[cardId]!);
+      }
+    }
+    
+    // Обновляем время последней синхронизации
+    lastSyncTime = now;
+    
+    // Дополняем информацию об изменениях
+    changes['removedFromExpected'] = totalRemovedExpected;
+    changes['removedFromScanned'] = totalRemovedScanned;
+    
+    return changes;
+  }
+
+  /// Принудительная очистка проданной бутылки из всех списков ревизии
+  void removeBottleFromAudit(String barcode, String cardId) {
+    // Удаляем из ожидаемых
+    expectedBarcodes[cardId]?.remove(barcode);
+    
+    // Удаляем из отсканированных
+    scannedBarcodes.remove(barcode);
+    
+    // Удаляем из найденных
+    foundBottles[cardId]?.remove(barcode);
+    
+    // Добавляем в проданные
+    soldBottlesDuringAudit[cardId] ??= <String>[];
+    if (!soldBottlesDuringAudit[cardId]!.contains(barcode)) {
+      soldBottlesDuringAudit[cardId]!.add(barcode);
+    }
+    
+    // Обновляем количество ожидаемых для карточки
+    final remainingCount = expectedBarcodes[cardId]?.length ?? 0;
+    if (remainingCount > 0) {
+      expectedBottles[cardId] = remainingCount;
+    } else {
+      // Если не осталось бутылок - удаляем карточку из ревизии
+      expectedBottles.remove(cardId);
+      expectedBarcodes.remove(cardId);
+      foundBottles.remove(cardId);
+    }
+    
+    // Обновляем время синхронизации
+    lastSyncTime = DateTime.now();
+  }
+
   /// Краткое описание ревизии для списков
   String get summary {
     if (isActive) {
-      return 'Активная • ${progressPercent.toStringAsFixed(0)}% • $displayDuration';
+      final soldInfo = soldBottlesCount > 0 ? ' • Продано: $soldBottlesCount' : '';
+      return 'Активная • ${progressPercent.toStringAsFixed(0)}% • $displayDuration$soldInfo';
     } else {
-      return 'Завершена • $displayDuration • ${discrepanciesCount > 0 ? '$discrepanciesCount расхождений' : 'Без расхождений'}';
+      final discrepancyInfo = discrepanciesCount > 0 ? '$discrepanciesCount расхождений' : 'Без расхождений';
+      final soldInfo = soldBottlesCount > 0 ? ' • Продано: $soldBottlesCount' : '';
+      return 'Завершена • $displayDuration • $discrepancyInfo$soldInfo';
     }
   }
+
+  /// Получить статистику для отображения в интерфейсе
+  Map<String, dynamic> getDisplayStats() {
+    return {
+      'totalExpected': totalExpected,
+      'totalScanned': totalScanned,
+      'totalFoundBottles': totalFoundBottles,
+      'unknownBottlesCount': unknownBottlesCount,
+      'soldBottlesCount': soldBottlesCount,
+      'progressPercent': progressPercent,
+      'discrepanciesCount': discrepanciesCount,
+      'isActive': isActive,
+      'displayDuration': displayDuration,
+      'hasChanges': soldBottlesCount > 0 || hasDiscrepancies || unknownBottlesCount > 0,
+    };
+  }
+
+  /// Валидация целостности данных ревизии
+  bool validate() {
+    try {
+      // Проверяем, что все ожидаемые штрихкоды соответствуют количеству
+      for (final cardId in expectedBottles.keys) {
+        final expectedCount = expectedBottles[cardId] ?? 0;
+        final barcodesCount = expectedBarcodes[cardId]?.length ?? 0;
+        if (expectedCount != barcodesCount) {
+          return false;
+        }
+      }
+      
+      // Проверяем, что все найденные бутылки есть в отсканированных
+      for (final barcodes in foundBottles.values) {
+        for (final barcode in barcodes) {
+          if (!scannedBarcodes.contains(barcode)) {
+            return false;
+          }
+        }
+      }
+      
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Создание копии ревизии (для тестирования или восстановления)
+  AuditSession copyWith({
+    String? id,
+    DateTime? startTime,
+    DateTime? endTime,
+    String? status,
+    Map<String, int>? expectedBottles,
+    Map<String, List<String>>? expectedBarcodes,
+    List<String>? scannedBarcodes,
+    Map<String, List<String>>? foundBottles,
+    String? notes,
+    Map<String, List<String>>? soldBottlesDuringAudit,
+    DateTime? lastSyncTime,
+  }) {
+    return AuditSession(
+      id: id ?? this.id,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      status: status ?? this.status,
+      expectedBottles: expectedBottles ?? Map<String, int>.from(this.expectedBottles),
+      expectedBarcodes: expectedBarcodes ?? Map<String, List<String>>.from(
+        this.expectedBarcodes.map((k, v) => MapEntry(k, List<String>.from(v)))
+      ),
+      scannedBarcodes: scannedBarcodes ?? List<String>.from(this.scannedBarcodes),
+      foundBottles: foundBottles ?? Map<String, List<String>>.from(
+        this.foundBottles.map((k, v) => MapEntry(k, List<String>.from(v)))
+      ),
+      notes: notes ?? this.notes,
+      soldBottlesDuringAudit: soldBottlesDuringAudit ?? Map<String, List<String>>.from(
+        this.soldBottlesDuringAudit.map((k, v) => MapEntry(k, List<String>.from(v)))
+      ),
+      lastSyncTime: lastSyncTime ?? this.lastSyncTime,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'AuditSession{id: $id, status: $status, expected: $totalExpected, scanned: $totalScanned, sold: $soldBottlesCount}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is AuditSession && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
 }

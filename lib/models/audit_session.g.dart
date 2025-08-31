@@ -28,13 +28,16 @@ class AuditSessionAdapter extends TypeAdapter<AuditSession> {
       foundBottles: (fields[7] as Map?)?.map((dynamic k, dynamic v) =>
           MapEntry(k as String, (v as List).cast<String>())),
       notes: fields[8] as String?,
+      soldBottlesDuringAudit: (fields[9] as Map?)?.map((dynamic k, dynamic v) =>
+          MapEntry(k as String, (v as List).cast<String>())),
+      lastSyncTime: fields[10] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, AuditSession obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -52,7 +55,11 @@ class AuditSessionAdapter extends TypeAdapter<AuditSession> {
       ..writeByte(7)
       ..write(obj.foundBottles)
       ..writeByte(8)
-      ..write(obj.notes);
+      ..write(obj.notes)
+      ..writeByte(9)
+      ..write(obj.soldBottlesDuringAudit)
+      ..writeByte(10)
+      ..write(obj.lastSyncTime);
   }
 
   @override

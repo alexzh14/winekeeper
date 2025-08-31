@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class AppTheme {
   // Основная цветовая палитра (новая мягкая схема)
 static const Color _primary = Color(0xFFFF857A);        // Coral
-static const Color _primaryLight = Color(0xFFE26C64);   // Hover Coral
+//static const Color _primaryLight = Color(0xFFE26C64);   // Hover Coral
 static const Color _secondary = Color(0xFFFFD6D1);     // Pastel Pink
 static const Color _tertiary = Color(0xFF9EB89C);      // Light Olive
 

@@ -5,6 +5,7 @@ import 'package:winekeeper/models/wine_card.dart';
 import 'package:winekeeper/models/wine_bottle.dart';
 import 'package:winekeeper/screens/barcode_scanner_screen.dart';
 import 'package:winekeeper/core/app_theme.dart';
+import 'package:winekeeper/screens/audit_detail_screen.dart';
 
 class AuditListScreen extends StatefulWidget {
   const AuditListScreen({super.key});
@@ -356,9 +357,13 @@ class _AuditListScreenState extends State<AuditListScreen> {
   }
 
   void _openAuditDetails(AuditSession audit) {
-    // TODO: Реализуем в следующем шаге
-    _showMessage('Экран деталей ревизии\nбудет реализован в следующем шаге');
-  }
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => AuditDetailScreen(audit: audit),
+    ),
+  );
+}
 
   void _showMessage(String message) {
     if (mounted) {
