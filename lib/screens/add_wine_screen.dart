@@ -15,8 +15,8 @@ class _AddWineScreenState extends State<AddWineScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _yearController = TextEditingController();
-
   final _customVolumeController = TextEditingController();
+  final _customCountryController = TextEditingController();
 
   String? _selectedCountry;
   String? _selectedColor;
@@ -24,7 +24,6 @@ class _AddWineScreenState extends State<AddWineScreen> {
   double? _selectedVolume;
   bool _useCustomVolume = false;
   bool _useCustomCountry = false;
-  final _customCountryController = TextEditingController();
 
   late Box<WineCard> cardsBox;
 
@@ -64,7 +63,7 @@ class _AddWineScreenState extends State<AddWineScreen> {
     _nameController.dispose();
     _yearController.dispose();
     _customVolumeController.dispose();
-    _customCountryController.dispose(); // ДОБАВИТЬ ЭТУ СТРОКУ
+    _customCountryController.dispose();
     super.dispose();
   }
 
@@ -76,8 +75,7 @@ class _AddWineScreenState extends State<AddWineScreen> {
     // Определяем финальный объем
     double finalVolume;
     if (_useCustomVolume) {
-      finalVolume =
-          double.parse(_customVolumeController.text.replaceAll(',', '.'));
+      finalVolume = double.parse(_customVolumeController.text.replaceAll(',', '.'));
     } else {
       finalVolume = _selectedVolume!;
     }
@@ -90,161 +88,34 @@ class _AddWineScreenState extends State<AddWineScreen> {
           ? _customCountryController.text.trim()
           : _selectedCountry,
       year: _yearController.text.isNotEmpty
-          ? int.parse(_yearController.text)
+          ? int.tryParse(_yearController.text)
           : null,
       color: _selectedColor,
       isSparkling: _isSparkling,
     );
 
-    await cardsBox.put(card.id, card);
+    try {
+      await cardsBox.put(card.id, card);
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Карточка "${card.name}" создана'),
-          backgroundColor: AppTheme.success, // Success цвет
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-
-      Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Карточка "${card.name}" создана'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+          ),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ошибка при создании карточки'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
-  }
-
-  Widget _buildVolumeSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.local_drink_outlined,
-                color: Colors.grey.shade700, size: 20),
-            const SizedBox(width: 8),
-            const Text(
-              "Объем одной бутылки",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
-            const Text(
-              " *",
-              style: TextStyle(color: Colors.red, fontSize: 16),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-
-        // Стандартные объемы
-        if (!_useCustomVolume) ...[
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: WineCard.standardVolumes.map((volume) {
-              final isSelected = _selectedVolume == volume;
-              final displayName = WineCard.volumeNames[volume] ??
-                  '${volume.toStringAsFixed(3)} л';
-
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedVolume = volume;
-                  });
-                },
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                        : Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.grey.shade300,
-                      width: isSelected ? 2 : 1,
-                    ),
-                  ),
-                  child: Text(
-                    displayName,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.w500,
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.grey.shade700,
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 12),
-          TextButton.icon(
-            onPressed: () {
-              setState(() {
-                _useCustomVolume = true;
-                _customVolumeController.text =
-                    _selectedVolume?.toStringAsFixed(3) ?? '';
-              });
-            },
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            label: const Text('Указать свой объем'),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.grey.shade700,
-            ),
-          ),
-        ],
-
-        // Пользовательский ввод объема
-        if (_useCustomVolume) ...[
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _customVolumeController,
-                  decoration: const InputDecoration(
-                    hintText: "Например: 0,750",
-                    suffixText: 'л',
-                    border: OutlineInputBorder(),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  ),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
-                  ],
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Укажите объем';
-                    }
-                    final volume = double.tryParse(value.replaceAll(',', '.'));
-                    if (volume == null || volume <= 0 || volume > 50) {
-                      return 'Некорректный объем';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _useCustomVolume = false;
-                    _selectedVolume = 0.750;
-                  });
-                },
-                child: const Text('Отмена'),
-              ),
-            ],
-          ),
-        ],
-      ],
-    );
   }
 
   @override
@@ -252,61 +123,28 @@ class _AddWineScreenState extends State<AddWineScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-        title: const Text(
-          "Создать карточку вина",
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
+        title: const Text('Новое вино'),
         backgroundColor: Theme.of(context).colorScheme.surface,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => Navigator.pop(context),
-        ),
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Название вина
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [AppTheme.softShadow],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.wine_bar_outlined,
-                          color: Colors.grey.shade700, size: 20),
-                      const SizedBox(width: 8),
-                      const Text(
-                        "Название вина",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const Text(
-                        " *",
-                        style: TextStyle(color: Colors.red, fontSize: 16),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Название вина
+                _buildSection(
+                  title: 'Название',
+                  required: true,
+                  child: TextFormField(
                     controller: _nameController,
                     decoration: const InputDecoration(
                       hintText: "Например: Château Margaux",
                       border: OutlineInputBorder(),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
@@ -315,214 +153,119 @@ class _AddWineScreenState extends State<AddWineScreen> {
                       return null;
                     },
                   ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Страна и год
-            Row(
-              children: [
-                // Страна
-                Expanded(
-                  flex: 3,
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [AppTheme.softShadow],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.public_outlined,
-                                color: Colors.grey.shade700, size: 20),
-                            const SizedBox(width: 8),
-                            const Text(
-                              "Страна",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        if (!_useCustomCountry) ...[
-                          DropdownButtonFormField<String>(
-                            value: _selectedCountry,
-                            decoration: const InputDecoration(
-                              hintText: "Выберите",
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 14),
-                            ),
-                            items: _countries.map((country) {
-                              return DropdownMenuItem(
-                                value: country,
-                                child: Text(country),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                if (value == 'Другое') {
-                                  _useCustomCountry = true;
-                                  _selectedCountry = null;
-                                } else {
-                                  _selectedCountry = value;
-                                }
-                              });
-                            },
-                          ),
-                        ] else ...[
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _customCountryController,
-                                  decoration: const InputDecoration(
-                                    hintText: "Введите страну",
-                                    border: OutlineInputBorder(),
-                                    contentPadding: EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 14),
-                                  ),
-                                  validator: (value) {
-                                    if (value == null || value.trim().isEmpty) {
-                                      return 'Укажите страну';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              TextButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _useCustomCountry = false;
-                                    _selectedCountry = null;
-                                    _customCountryController.clear();
-                                  });
-                                },
-                                child: const Text('Отмена'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
                 ),
 
-                const SizedBox(width: 12),
+                const SizedBox(height: 24),
 
-                // Год
-                Expanded(
-                  flex: 2,
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [AppTheme.softShadow],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.calendar_today_outlined,
-                                color: Colors.grey.shade700, size: 20),
-                            const SizedBox(width: 8),
-                            const Text(
-                              "Год",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _yearController,
+                // Страна - полная ширина для мобильного
+                _buildSection(
+                  title: 'Страна',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (!_useCustomCountry) ...[
+                        DropdownButtonFormField<String>(
+                          value: _selectedCountry,
                           decoration: const InputDecoration(
-                            hintText: "2020",
                             border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 14),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           ),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly
-                          ],
+                          hint: const Text('Выберите страну'),
+                          items: _countries.map((country) {
+                            return DropdownMenuItem<String>(
+                              value: country,
+                              child: Text(country),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value == 'Другое') {
+                              setState(() {
+                                _selectedCountry = null;
+                                _useCustomCountry = true;
+                              });
+                            } else {
+                              setState(() {
+                                _selectedCountry = value;
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _useCustomCountry = true;
+                              _selectedCountry = null;
+                            });
+                          },
+                          child: const Text('Ввести вручную'),
+                        ),
+                      ] else ...[
+                        TextFormField(
+                          controller: _customCountryController,
+                          decoration: const InputDecoration(
+                            hintText: "Введите страну",
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          ),
                           validator: (value) {
-                            if (value != null && value.isNotEmpty) {
-                              final year = int.tryParse(value);
-                              if (year == null ||
-                                  year < 1800 ||
-                                  year > DateTime.now().year + 2) {
-                                return 'Некорректный год';
-                              }
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Укажите страну';
                             }
                             return null;
                           },
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // Объем бутылки
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [AppTheme.softShadow],
-              ),
-              child: _buildVolumeSelector(),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Цвет вина
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [AppTheme.softShadow],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.palette_outlined,
-                          color: Colors.grey.shade700, size: 20),
-                      const SizedBox(width: 8),
-                      const Text(
-                        "Цвет вина",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _useCustomCountry = false;
+                              _selectedCountry = null;
+                              _customCountryController.clear();
+                            });
+                          },
+                          child: const Text('Выбрать из списка'),
                         ),
-                      ),
+                      ],
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Wrap(
+                ),
+
+                const SizedBox(height: 24),
+
+                // Год
+                _buildSection(
+                  title: 'Год урожая',
+                  child: TextFormField(
+                    controller: _yearController,
+                    decoration: const InputDecoration(
+                      hintText: "Например: 2018",
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(4),
+                    ],
+                    validator: (value) {
+                      if (value != null && value.isNotEmpty) {
+                        final year = int.tryParse(value);
+                        if (year == null || year < 1800 || year > DateTime.now().year + 5) {
+                          return 'Введите корректный год (1800-${DateTime.now().year + 5})';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Цвет вина
+                _buildSection(
+                  title: 'Цвет вина',
+                  child: Wrap(
                     spacing: 12,
                     runSpacing: 12,
                     children: _wineColors.entries.map((entry) {
@@ -534,17 +277,14 @@ class _AddWineScreenState extends State<AddWineScreen> {
                           });
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
                             color: isSelected
                                 ? entry.value.withOpacity(0.1)
                                 : Colors.grey.shade50,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: isSelected
-                                  ? entry.value
-                                  : Colors.grey.shade300,
+                              color: isSelected ? entry.value : Colors.grey.shade300,
                               width: isSelected ? 2 : 1,
                             ),
                           ),
@@ -552,8 +292,8 @@ class _AddWineScreenState extends State<AddWineScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
-                                width: 12,
-                                height: 12,
+                                width: 16,
+                                height: 16,
                                 decoration: BoxDecoration(
                                   color: entry.value,
                                   shape: BoxShape.circle,
@@ -564,12 +304,8 @@ class _AddWineScreenState extends State<AddWineScreen> {
                                 entry.key,
                                 style: TextStyle(
                                   fontSize: 14,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w600
-                                      : FontWeight.w500,
-                                  color: isSelected
-                                      ? entry.value
-                                      : Colors.grey.shade700,
+                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                  color: isSelected ? entry.value : Colors.black87,
                                 ),
                               ),
                             ],
@@ -578,116 +314,248 @@ class _AddWineScreenState extends State<AddWineScreen> {
                       );
                     }).toList(),
                   ),
-                ],
-              ),
-            ),
+                ),
 
-            const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
-            // Игристое вино
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [AppTheme.softShadow],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                // Объем
+                _buildSection(
+                  title: 'Объем бутылки',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.bubble_chart_outlined,
-                          color: Colors.grey.shade700, size: 20),
-                      const SizedBox(width: 8),
-                      const Text(
-                        "Игристое вино",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                      if (!_useCustomVolume) ...[
+                        DropdownButtonFormField<double>(
+                          value: _selectedVolume,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          ),
+                          items: WineCard.standardVolumes.map((volume) {
+                            return DropdownMenuItem<double>(
+                              value: volume,
+                              child: Text('${volume.toStringAsFixed(3)} л'),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedVolume = value;
+                            });
+                          },
+                          validator: (value) {
+                            if (value == null) {
+                              return 'Выберите объем бутылки';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _useCustomVolume = true;
+                            });
+                          },
+                          child: const Text('Ввести свой объем'),
+                        ),
+                      ] else ...[
+                        TextFormField(
+                          controller: _customVolumeController,
+                          decoration: const InputDecoration(
+                            hintText: "Например: 0.375",
+                            suffixText: "л",
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Введите объем';
+                            }
+                            final volume = double.tryParse(value.replaceAll(',', '.'));
+                            if (volume == null || volume <= 0 || volume > 30) {
+                              return 'Введите корректный объем (0-30 л)';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _useCustomVolume = false;
+                              _selectedVolume = 0.750;
+                              _customVolumeController.clear();
+                            });
+                          },
+                          child: const Text('Выбрать стандартный'),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Игристое вино
+                _buildSection(
+                  title: 'Тип вина',
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.bubble_chart_outlined, size: 20),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Игристое вино',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
+                        Switch(
+                          value: _isSparkling,
+                          onChanged: (value) {
+                            setState(() {
+                              _isSparkling = value;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                // Кнопка создания карточки
+                ElevatedButton(
+                  onPressed: _saveCard,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    "Создать карточку вина",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Подсказка
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: Theme.of(context).colorScheme.onSurface,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'После создания карточки вы сможете привязать к ней конкретные бутылки, отсканировав их штрихкоды.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  SwitchListTile(
-                    value: _isSparkling,
-                    onChanged: (value) {
-                      setState(() {
-                        _isSparkling = value;
-                      });
-                    },
-                    title: Text(
-                      _isSparkling ? 'Да' : 'Нет',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    contentPadding: EdgeInsets.zero,
-                    activeColor: Colors.amber.shade600,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 32),
-
-            // Кнопка создания карточки
-            ElevatedButton(
-              onPressed: _saveCard,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
                 ),
-                elevation: 0,
-              ),
-              child: const Text(
-                "Создать карточку вина",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+
+                const SizedBox(height: 24),
+              ],
             ),
-
-            const SizedBox(height: 16),
-
-            // Подсказка
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .secondary
-                    .withOpacity(0.3), // Pastel Pink
-                borderRadius: BorderRadius.circular(12),
-                border:
-                    Border.all(color: Theme.of(context).colorScheme.secondary),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline,
-                      color: Theme.of(context).colorScheme.onSurface, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'После создания карточки вы сможете привязать к ней конкретные бутылки, отсканировав их штрихкоды.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-          ],
+          ),
         ),
       ),
     );
+  }
+
+  Widget _buildSection({
+    required String title,
+    required Widget child,
+    bool required = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [AppTheme.softShadow],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                _getIconForSection(title),
+                color: Colors.grey.shade700,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              if (required) const Text(
+                " *",
+                style: TextStyle(color: Colors.red, fontSize: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+
+  IconData _getIconForSection(String title) {
+    switch (title) {
+      case 'Название':
+        return Icons.wine_bar_outlined;
+      case 'Страна':
+        return Icons.public_outlined;
+      case 'Год урожая':
+        return Icons.calendar_today_outlined;
+      case 'Цвет вина':
+        return Icons.palette_outlined;
+      case 'Объем бутылки':
+        return Icons.straighten_outlined;
+      case 'Тип вина':
+        return Icons.bubble_chart_outlined;
+      default:
+        return Icons.info_outlined;
+    }
   }
 }

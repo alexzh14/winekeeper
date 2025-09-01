@@ -106,25 +106,39 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
             ),
         ],
       ),
-      body: Stack(
-        children: [
-          // Сканер
-          MobileScanner(
-            controller: cameraController,
-            onDetect: _foundBarcode,
-          ),
-          
-          // Оверлей с инструкциями
-          _buildScannerOverlay(),
-          
-          // Кнопка эмуляции (для тестирования)
-          Positioned(
-            bottom: 100,
-            left: 20,
-            right: 20,
-            child: _buildEmulateButton(),
-          ),
-        ],
+      body: SizedBox.expand(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Сканер - заполняет весь экран
+            ClipRect(
+              child: SizedBox.expand(
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.height,
+                    child: MobileScanner(
+                      controller: cameraController,
+                      onDetect: _foundBarcode,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // Оверлей с инструкциями
+            _buildScannerOverlay(),
+
+            // Кнопка эмуляции (для тестирования)
+            Positioned(
+              bottom: 100,
+              left: 20,
+              right: 20,
+              child: _buildEmulateButton(),
+            ),
+          ],
+        ),
       ),
     );
   }
